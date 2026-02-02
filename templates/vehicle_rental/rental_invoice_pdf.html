@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Fatura {{ invoice_data.invoice_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .company-info {
+            float: right;
+            width: 45%;
+            text-align: right;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        
+        .invoice-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        
+        .invoice-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .invoice-details table {
+            width: 100%;
+        }
+        
+        .invoice-details td {
+            padding: 5px;
+        }
+        
+        .customer-section {
+            width: 48%;
+            float: left;
+            margin-bottom: 30px;
+        }
+        
+        .vehicle-section {
+            width: 48%;
+            float: right;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+        
+        .rental-period {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            clear: both;
+        }
+        
+        .rental-period-content {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .rental-period-item {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .table th,
+        .table td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .table th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .table-warning {
+            background-color: #fff3cd;
+        }
+        
+        .table-danger {
+            background-color: #f8d7da;
+        }
+        
+        .total-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            float: right;
+            width: 45%;
+        }
+        
+        .total-section table {
+            width: 100%;
+            margin: 0;
+        }
+        
+        .total-section td {
+            padding: 8px;
+            border: none;
+        }
+        
+        .total-row {
+            background-color: #d4edda;
+            font-weight: bold;
+        }
+        
+        .payment-info {
+            clear: both;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+        
+        .payment-info h4 {
+            margin-top: 0;
+            font-size: 14px;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 1cm;
+            left: 1cm;
+            right: 1cm;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
+        }
+        
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header clearfix">
+        <div style="float: left; width: 50%;">
+            <div class="company-name">{{ company_info.name }}</div>
+            <div>
+                {{ company_info.address }}<br>
+                {{ company_info.city }}<br>
+                <strong>Telefone:</strong> {{ company_info.phone }}<br>
+                <strong>Email:</strong> {{ company_info.email }}<br>
+                <strong>NIF:</strong> {{ company_info.vat_number }}
+            </div>
+        </div>
+        <div class="company-info">
+            <div class="invoice-title">FATURA</div>
+            <div class="invoice-details">
+                <table>
+                    <tr>
+                        <td><strong>Nº Fatura:</strong></td>
+                        <td>{{ invoice_data.invoice_number }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Fatura:</strong></td>
+                        <td>{{ invoice_data.invoice_date|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Vencimento:</strong></td>
+                        <td>{{ invoice_data.due_date|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Aluguer Nº:</strong></td>
+                        <td>#{{ invoice_data.rental.id|stringformat:"05d" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer and Vehicle Information -->
+    <div class="clearfix">
+        <div class="customer-section">
+            <div class="section-title">Faturar a:</div>
+            <div>
+                <strong>{{ invoice_data.rental.customer.first_name }} {{ invoice_data.rental.customer.last_name }}</strong><br>
+                {% if invoice_data.rental.customer.address %}
+                    {{ invoice_data.rental.customer.address }}<br>
+                {% endif %}
+                <strong>Telefone:</strong> {{ invoice_data.rental.customer.phone_number }}<br>
+                <strong>Email:</strong> {{ invoice_data.rental.customer.email }}<br>
+                {% if invoice_data.rental.customer.id_number %}
+                    <strong>NIF/CC:</strong> {{ invoice_data.rental.customer.id_number }}
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="vehicle-section">
+            <div class="section-title">Detalhes do Veículo:</div>
+            <div>
+                <strong>{{ invoice_data.rental.vehicle.brand.name }} {{ invoice_data.rental.vehicle.model }}</strong><br>
+                <strong>Matrícula:</strong> {{ invoice_data.rental.vehicle.registration_number }}<br>
+                <strong>Ano:</strong> {{ invoice_data.rental.vehicle.year }}<br>
+                <strong>Cor:</strong> {{ invoice_data.rental.vehicle.color }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Rental Period -->
+    <div class="rental-period">
+        <div class="section-title">Período do Aluguer</div>
+        <div class="rental-period-content">
+            <div class="rental-period-item">
+                <strong>Data de Início:</strong><br>
+                {{ invoice_data.rental.start_date|date:"d/m/Y H:i" }}
+            </div>
+            <div class="rental-period-item">
+                <strong>Data de Fim:</strong><br>
+                {{ invoice_data.rental.end_date|date:"d/m/Y H:i" }}
+            </div>
+            <div class="rental-period-item">
+                <strong>Duração:</strong><br>
+                {{ invoice_data.rental.get_rental_duration }} dia{% if invoice_data.rental.get_rental_duration != 1 %}s{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Items -->
+    <div class="section-title">Itens da Fatura</div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Descrição</th>
+                <th class="text-center">Quantidade</th>
+                <th class="text-right">Preço Unitário</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Main rental charge -->
+            <tr>
+                <td>
+                    <strong>Aluguer de Veículo</strong><br>
+                    <small>{{ invoice_data.rental.vehicle.brand.name }} {{ invoice_data.rental.vehicle.model }} ({{ invoice_data.rental.vehicle.registration_number }})</small>
+                </td>
+                <td class="text-center">{{ invoice_data.rental.get_rental_duration }} dia{% if invoice_data.rental.get_rental_duration != 1 %}s{% endif %}</td>
+                <td class="text-right">{{ invoice_data.rental.daily_rate|floatformat:0 }} ECV</td>
+                <td class="text-right">{{ invoice_data.subtotal|floatformat:0 }} ECV</td>
+            </tr>
+
+            <!-- Security Deposit -->
+            {% if invoice_data.rental.security_deposit %}
+            <tr>
+                <td>
+                    <strong>Depósito de Segurança</strong><br>
+                    <small>Valor reembolsável</small>
+                </td>
+                <td class="text-center">1</td>
+                <td class="text-right">{{ invoice_data.rental.security_deposit|floatformat:0 }} ECV</td>
+                <td class="text-right">{{ invoice_data.rental.security_deposit|floatformat:0 }} ECV</td>
+            </tr>
+            {% endif %}
+
+            <!-- Late Return Fee -->
+            {% if invoice_data.rental.late_return_fee %}
+            <tr class="table-warning">
+                <td>
+                    <strong>Taxa de Atraso na Devolução</strong><br>
+                    <small>Devolução fora do prazo</small>
+                </td>
+                <td class="text-center">1</td>
+                <td class="text-right">{{ invoice_data.rental.late_return_fee|floatformat:0 }} ECV</td>
+                <td class="text-right">{{ invoice_data.rental.late_return_fee|floatformat:0 }} ECV</td>
+            </tr>
+            {% endif %}
+
+            <!-- Damage Fee -->
+            {% if invoice_data.rental.damage_fee %}
+            <tr class="table-danger">
+                <td>
+                    <strong>Taxa de Danos</strong><br>
+                    <small>Danos no veículo</small>
+                </td>
+                <td class="text-center">1</td>
+                <td class="text-right">{{ invoice_data.rental.damage_fee|floatformat:0 }} ECV</td>
+                <td class="text-right">{{ invoice_data.rental.damage_fee|floatformat:0 }} ECV</td>
+            </tr>
+            {% endif %}
+
+            <!-- Related Expenses -->
+            {% if invoice_data.expenses %}
+                {% for expense in invoice_data.expenses %}
+                <tr>
+                    <td>
+                        <strong>Despesa: {{ expense.description }}</strong><br>
+                        <small>{{ expense.category.name }}</small>
+                    </td>
+                    <td class="text-center">1</td>
+                    <td class="text-right">{{ expense.amount|floatformat:0 }} ECV</td>
+                    <td class="text-right">{{ expense.amount|floatformat:0 }} ECV</td>
+                </tr>
+                {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="total-section">
+        <table>
+            <tr>
+                <td><strong>Subtotal:</strong></td>
+                <td class="text-right">{{ invoice_data.subtotal|floatformat:0 }} ECV</td>
+            </tr>
+            {% if invoice_data.rental.security_deposit %}
+            <tr>
+                <td>Depósito de Segurança:</td>
+                <td class="text-right">{{ invoice_data.rental.security_deposit|floatformat:0 }} ECV</td>
+            </tr>
+            {% endif %}
+            {% if invoice_data.total_fees %}
+            <tr>
+                <td>Taxas Adicionais:</td>
+                <td class="text-right">{{ invoice_data.total_fees|floatformat:0 }} ECV</td>
+            </tr>
+            {% endif %}
+            {% if invoice_data.total_expenses %}
+            <tr>
+                <td>Despesas Relacionadas:</td>
+                <td class="text-right">{{ invoice_data.total_expenses|floatformat:0 }} ECV</td>
+            </tr>
+            {% endif %}
+            {% if invoice_data.rental.commission_amount %}
+            <tr>
+                <td>Comissão ({{ invoice_data.rental.commission_rate }}%):</td>
+                <td class="text-right">{{ invoice_data.rental.commission_amount|floatformat:0 }} ECV</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td><strong>TOTAL GERAL:</strong></td>
+                <td class="text-right"><strong>{{ invoice_data.grand_total|floatformat:0 }} ECV</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Payment Information -->
+    <div class="payment-info">
+        <h4>Informações de Pagamento</h4>
+        <p>
+            <strong>Estado:</strong> 
+            {% if invoice_data.rental.status == 'completed' %}
+                Concluído
+            {% elif invoice_data.rental.status == 'active' %}
+                Ativo
+            {% else %}
+                {{ invoice_data.rental.get_status_display }}
+            {% endif %}
+        </p>
+        <p style="margin-bottom: 0; font-size: 10px; color: #666;">
+            Esta fatura foi gerada automaticamente em {{ invoice_data.invoice_date|date:"d/m/Y" }}.
+            Para questões sobre esta fatura, contacte-nos através do telefone {{ company_info.phone }} ou email {{ company_info.email }}.
+        </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        {{ company_info.name }} - {{ company_info.address }}, {{ company_info.city }} - NIF: {{ company_info.vat_number }}
+    </div>
+</body>
+</html>

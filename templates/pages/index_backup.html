@@ -1,0 +1,454 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Painel de Controle - DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+  <div class="pc-container">
+    <div class="pc-content">
+      <!-- [ breadcrumb ] start -->
+      <div class="page-header">
+        <div class="page-block">
+          <div class="row align-items-center">
+            <div class="col-md-12">
+              <div class="page-header-title">
+                <h5 class="mb-0">Painel de Controle</h5>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <ul class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{% url "index" %}">Início</a></li>
+                <li class="breadcrumb-item"><a href="javascript: void(0)">Dashboard</a></li>
+                <li class="breadcrumb-item" aria-current="page">Painel de Controle</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- [ breadcrumb ] end -->
+      <!-- [ Main Content ] start -->
+      <div class="row">
+        
+        <!-- [ Active Rentals ] start -->
+        <div class="col-md-6 col-xl-6">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h2 class="text-white mb-1">16</h2>
+                            <p class="text-white-50 mb-0">Alugueres Ativos</p>
+                        </div>
+                        <div class="col-auto">
+                            <i class="feather icon-calendar text-white f-36"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ Active Rentals ] end -->
+
+        <!-- [ Monthly Revenue ] start -->
+        <div class="col-md-6 col-xl-6">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h2 class="text-white mb-1">245.500 ECV</h2>
+                            <p class="text-white-50 mb-0">Receita Mensal</p>
+                        </div>
+                        <div class="col-auto">
+                            <i class="feather icon-trending-up text-white f-36"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ Monthly Revenue ] end -->
+
+        <!-- [ Recent Rentals ] start -->
+        <div class="col-xl-8">
+            <div class="card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0">Alugueres Recentes</h5>
+                    <a href="{% url 'vehicle_rental:rental_list' %}" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Veículo</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Valor Diário</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>João Silva</td>
+                                    <td>Honda Civic</td>
+                                    <td><span class="badge bg-success">Ativo</span></td>
+                                    <td class="text-end"><strong>8.500 ECV</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Maria Santos</td>
+                                    <td>Toyota Corolla</td>
+                                    <td><span class="badge bg-primary">Ativo</span></td>
+                                    <td class="text-end"><strong>7.200 ECV</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Pedro Costa</td>
+                                    <td>BMW X3</td>
+                                    <td><span class="badge bg-warning">Finalizado</span></td>
+                                    <td class="text-end"><strong>18.900 ECV</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Ana Rodrigues</td>
+                                    <td>Nissan Sentra</td>
+                                    <td><span class="badge bg-success">Ativo</span></td>
+                                    <td class="text-end"><strong>6.800 ECV</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ Recent Rentals ] end -->
+
+        <!-- [ Quick Actions ] start -->
+        <div class="col-xl-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Ações Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'vehicle_rental:rental_create' %}" class="btn btn-primary">
+                            <i class="feather icon-plus me-2"></i>Novo Aluguer
+                        </a>
+                        <a href="{% url 'vehicle_rental:vehicle_list' %}" class="btn btn-outline-primary">
+                            <i class="feather icon-truck me-2"></i>Gerenciar Veículos
+                        </a>
+                        <a href="{% url 'vehicle_rental:expense_list' %}" class="btn btn-outline-warning">
+                            <i class="feather icon-dollar-sign me-2"></i>Ver Despesas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ Quick Actions ] end -->
+                                        <i class="feather icon-zap f-20"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">Veículos Elétricos</h6>
+                                    <p class="text-muted mb-0">4 unidades</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h6 class="mb-0">3 disponíveis</h6>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="flex-shrink-0">
+                                    <div class="avtar bg-light-danger">
+                                        <i class="feather icon-tool f-20"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">Em Manutenção</h6>
+                                    <p class="text-muted mb-0">3 unidades</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <h6 class="mb-0">Indisponíveis</h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ fleet status section ] end -->
+
+        <!-- [ monthly revenue chart ] start -->
+        <div class="col-xl-4 col-md-6">
+            <div class="card bg-primary">
+                <div class="card-header border-0">
+                    <h5 class="text-white">Receita Mensal</h5>
+                </div>
+                <div class="card-body" style="padding:0 25px;">
+                    <div class="earning-text mb-0">
+                        <h3 class="mb-2 text-white f-w-300">8.945.000 ECV <i class="feather icon-arrow-up teal accent-3"></i></h3>
+                        <span class="text-uppercase text-white d-block">Receita Total</span>
+                    </div>
+                    <div id="Widget-line-chart" class="WidgetlineChart2 ChartShadow" style="height:180px;"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body border-bottom">
+                    <div class="row d-flex align-items-center">
+                        <div class="col-auto">
+                            <i class="feather icon-users f-30 text-success"></i>
+                        </div>
+                        <div class="col">
+                            <h3 class="f-w-300">142</h3>
+                            <span class="d-block text-uppercase">Total de Clientes</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row d-flex align-items-center">
+                        <div class="col-auto">
+                            <i class="feather icon-calendar f-30 text-primary"></i>
+                        </div>
+                        <div class="col">
+                            <h3 class="f-w-300">26</h3>
+                            <span class="d-block text-uppercase">Reservas Hoje</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ monthly revenue chart ] end -->
+
+        <!-- [vehicle performance section] start -->
+        <div class="col-md-12 col-xl-4">
+            <div class="card card-social">
+                <div class="card-body border-bottom">
+                    <div class="row align-items-center justify-content-center">
+                        <div class="col-auto">
+                            <i class="feather icon-trending-up text-primary f-36"></i>
+                        </div>
+                        <div class="col text-end">
+                            <h3>87%</h3>
+                            <h5 class="text-success mb-0">+5.2% <span class="text-muted">Taxa de Ocupação</span></h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center justify-content-center card-active">
+                        <div class="col-6">
+                            <h6 class="text-center m-b-10"><span class="text-muted m-r-5">Meta:</span>90%</h6>
+                            <div class="progress">
+                                <div class="progress-bar bg-brand-color-1" role="progressbar" style="width:87%;height:6px;" aria-valuenow="87" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-center  m-b-10"><span class="text-muted m-r-5">Km Médio:</span>1.250</h6>
+                            <div class="progress">
+                                <div class="progress-bar bg-brand-color-2" role="progressbar" style="width:75%;height:6px;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card card-social">
+                <div class="card-body border-bottom">
+                    <div class="row align-items-center justify-content-center">
+                        <div class="col-auto">
+                            <i class="feather icon-dollar-sign text-success f-36"></i>
+                        </div>
+                        <div class="col text-end">
+                            <h3>14.500 ECV</h3>
+                            <h5 class="text-info mb-0">+8.4% <span class="text-muted">Ticket Médio</span></h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center justify-content-center card-active">
+                        <div class="col-6">
+                            <h6 class="text-center m-b-10"><span class="text-muted m-r-5">Meta:</span>15.000 ECV</h6>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width:97%;height:6px;" aria-valuenow="97" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-center  m-b-10"><span class="text-muted m-r-5">Diárias:</span>3.2</h6>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width:65%;height:6px;" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card card-social">
+                <div class="card-body border-bottom">
+                    <div class="row align-items-center justify-content-center">
+                        <div class="col-auto">
+                            <i class="feather icon-shield text-warning f-36"></i>
+                        </div>
+                        <div class="col text-end">
+                            <h3>96%</h3>
+                            <h5 class="text-primary mb-0">+2.1% <span class="text-muted">Satisfação</span></h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center justify-content-center card-active">
+                        <div class="col-6">
+                            <h6 class="text-center m-b-10"><span class="text-muted m-r-5">Meta:</span>95%</h6>
+                            <div class="progress">
+                                <div class="progress-bar bg-brand-color-1" role="progressbar" style="width:96%;height:6px;" aria-valuenow="96" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-center  m-b-10"><span class="text-muted m-r-5">NPS:</span>8.7</h6>
+                            <div class="progress">
+                                <div class="progress-bar bg-brand-color-2" role="progressbar" style="width:87%;height:6px;" aria-valuenow="87" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [vehicle performance section] end -->
+
+        <!-- [ customer satisfaction rating ] starts-->
+        <div class="col-xl-4 col-md-6">
+            <div class="card user-list">
+                <div class="card-header">
+                    <h5>Avaliação dos Clientes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center justify-content-center m-b-20">
+                        <div class="col-6">
+                            <h2 class="f-w-300 d-flex align-items-center float-start m-0">4.8 <i class="fas fa-star f-10 m-l-10 text-warning"></i></h2>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="d-flex  align-items-center float-end m-0">0.3 <i class="fas fa-caret-up text-success f-22 m-l-10"></i></h6>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xl-12">
+                            <h6 class="align-items-center float-start"><i class="fas fa-star f-10 m-r-10 text-warning"></i>5</h6>
+                            <h6 class="align-items-center float-end">287</h6>
+                            <div class="progress m-t-30 m-b-20" style="height: 6px;">
+                                <div class="progress-bar bg-brand-color-1" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="col-xl-12">
+                            <h6 class="align-items-center float-start"><i class="fas fa-star f-10 m-r-10 text-warning"></i>4</h6>
+                            <h6 class="align-items-center float-end">89</h6>
+                            <div class="progress m-t-30  m-b-20" style="height: 6px;">
+                                <div class="progress-bar bg-brand-color-1" role="progressbar" style="width: 23%;" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="col-xl-12">
+                            <h6 class="align-items-center float-start"><i class="fas fa-star f-10 m-r-10 text-warning"></i>3</h6>
+                            <h6 class="align-items-center float-end">8</h6>
+                            <div class="progress m-t-30  m-b-20" style="height: 6px;">
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 2%;" aria-valuenow="2" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="col-xl-12">
+                            <h6 class="align-items-center float-start"><i class="fas fa-star f-10 m-r-10 text-warning"></i>2</h6>
+                            <h6 class="align-items-center float-end">0</h6>
+                            <div class="progress m-t-30  m-b-20" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" style="width:0;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        <div class="col-xl-12">
+                            <h6 class="align-items-center float-start"><i class="fas fa-star f-10 m-r-10 text-warning"></i>1</h6>
+                            <h6 class="align-items-center float-end">0</h6>
+                            <div class="progress m-t-30  m-b-20" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" style="width:0;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ customer satisfaction rating ] end -->
+
+        <!-- [ Recent Rentals ] start -->
+        <div class="col-xl-8 col-md-6">
+            <div class="card Recent-Users">
+                <div class="card-header">
+                    <h5>Alugueres Recentes</h5>
+                </div>
+                <div class="card-body px-0 py-3">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <tbody>
+                                <tr class="unread">
+                                    <td><img class="rounded-circle" style="width:40px;" src="{% static "assets/images/user/avatar-1.jpg" %}" alt="client-photo"></td>
+                                    <td>
+                                        <h6 class="mb-1">Carlos Silva</h6>
+                                        <p class="m-0">Honda Civic 2023 - Compacto</p>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-muted"><i class="fas fa-circle text-success f-10 m-r-15"></i>15 JAN 09:30</h6>
+                                    </td>
+                                    <td><span class="badge bg-success text-white f-12">Ativo</span><span class="badge ms-2 bg-info text-white f-12">8.500 ECV/dia</span></td>
+                                </tr>
+                                <tr class="unread">
+                                    <td><img class="rounded-circle" style="width:40px;" src="{% static "assets/images/user/avatar-2.jpg" %}" alt="client-photo"></td>
+                                    <td>
+                                        <h6 class="mb-1">Maria Santos</h6>
+                                        <p class="m-0">Toyota RAV4 2024 - SUV</p>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-muted"><i class="fas fa-circle text-warning f-10 m-r-15"></i>15 JAN 14:20</h6>
+                                    </td>
+                                    <td><span class="badge bg-warning text-white f-12">Pendente</span><span class="badge ms-2 bg-info text-white f-12">12.000 ECV/dia</span></td>
+                                </tr>
+                                <tr class="unread">
+                                    <td><img class="rounded-circle" style="width:40px;" src="{% static "assets/images/user/avatar-3.jpg" %}" alt="client-photo"></td>
+                                    <td>
+                                        <h6 class="mb-1">João Oliveira</h6>
+                                        <p class="m-0">BMW X3 2023 - Luxo</p>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-muted"><i class="fas fa-circle text-success f-10 m-r-15"></i>14 JAN 16:45</h6>
+                                    </td>
+                                    <td><span class="badge bg-success text-white f-12">Ativo</span><span class="badge ms-2 bg-info text-white f-12">18.000 ECV/dia</span></td>
+                                </tr>
+                                <tr class="unread">
+                                    <td><img class="rounded-circle" style="width:40px;" src="{% static "assets/images/user/avatar-1.jpg" %}" alt="client-photo"></td>
+                                    <td>
+                                        <h6 class="mb-1">Ana Costa</h6>
+                                        <p class="m-0">Tesla Model 3 - Elétrico</p>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-muted f-w-300"><i class="fas fa-circle text-danger f-10 m-r-15"></i>13 JAN 11:15</h6>
+                                    </td>
+                                    <td><span class="badge bg-danger text-white f-12">Finalizado</span><span class="badge ms-2 bg-info text-white f-12">16.000 ECV/dia</span></td>
+                                </tr>
+                                <tr class="unread">
+                                    <td><img class="rounded-circle" style="width:40px;" src="{% static "assets/images/user/avatar-2.jpg" %}" alt="client-photo"></td>
+                                    <td>
+                                        <h6 class="mb-1">Pedro Ferreira</h6>
+                                        <p class="m-0">Hyundai HB20 2023 - Compacto</p>
+                                    </td>
+                                    <td>
+                                        <h6 class="text-muted"><i class="fas fa-circle text-success f-10 m-r-15"></i>12 JAN 08:30</h6>
+                                    </td>
+                                    <td><span class="badge bg-success text-white f-12">Ativo</span><span class="badge ms-2 bg-info text-white f-12">7.500 ECV/dia</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- [ Recent Rentals ] end -->
+    </div>
+      <!-- [ Main Content ] end -->
+    </div>
+  </div>
+
+{% endblock content %}
+
+{% block extra_js %}
+
+<script src="{% static "assets/js/plugins/apexcharts.min.js" %}"></script>
+<script src="{% static "assets/js/plugins/jsvectormap.min.js" %}"></script>
+<script src="{% static "assets/js/plugins/world.js" %}"></script>
+<script src="{% static "assets/js/pages/dashboard-default.js" %}"></script>
+
+{% endblock extra_js %}

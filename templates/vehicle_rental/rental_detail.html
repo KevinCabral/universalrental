@@ -1,0 +1,541 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Detalhes do Aluguer #{{ rental.id|stringformat:"05d" }} | Sistema de Aluguer{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Detalhes do Aluguer</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_list' %}">Alugueres</a></li>
+          <li class="breadcrumb-item active">Aluguer #{{ rental.id|stringformat:"05d" }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+          <div class="d-flex align-items-center mb-2 mb-md-0">
+            <h4 class="me-3 mb-0">Aluguer #{{ rental.id|stringformat:"05d" }}</h4>
+            <span class="badge bg-{% if rental.status == 'active' %}warning{% elif rental.status == 'completed' %}success{% elif rental.status == 'cancelled' %}danger{% elif rental.status == 'pending' %}info{% elif rental.status == 'confirmed' %}primary{% else %}secondary{% endif %} fs-6 px-3 py-2">
+              {% if rental.status == 'active' %}
+                <i class="fas fa-play-circle me-1"></i> Ativo
+              {% elif rental.status == 'completed' %}
+                <i class="fas fa-check-circle me-1"></i> Concluído
+              {% elif rental.status == 'cancelled' %}
+                <i class="fas fa-times-circle me-1"></i> Cancelado
+              {% elif rental.status == 'pending' %}
+                <i class="fas fa-clock me-1"></i> Pendente
+              {% elif rental.status == 'confirmed' %}
+                <i class="fas fa-check me-1"></i> Confirmado
+              {% else %}
+                <i class="fas fa-question-circle me-1"></i> {{ rental.get_status_display }}
+              {% endif %}
+            </span>
+          </div>
+          
+          <div class="btn-group" role="group">
+            <a href="{% url 'vehicle_rental:rental_list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i> Voltar
+            </a>
+            
+            <!-- Action buttons based on rental status -->
+            {% if rental.status == 'pending' %}
+              <a href="{% url 'vehicle_rental:rental_confirm' rental.pk %}" class="btn btn-success">
+                <i class="fas fa-check me-2"></i> Confirmar
+              </a>
+              <a href="{% url 'vehicle_rental:rental_cancel' rental.pk %}" class="btn btn-danger">
+                <i class="fas fa-times me-2"></i> Cancelar
+              </a>
+            {% elif rental.status == 'confirmed' %}
+              <a href="{% url 'vehicle_rental:rental_return' rental.pk %}" class="btn btn-warning">
+                <i class="fas fa-calendar-check me-2"></i> Registar Devolução
+              </a>
+              <a href="{% url 'vehicle_rental:rental_cancel' rental.pk %}" class="btn btn-danger">
+                <i class="fas fa-times me-2"></i> Cancelar
+              </a>
+            {% elif rental.status == 'active' %}
+              <a href="{% url 'vehicle_rental:rental_return' rental.pk %}" class="btn btn-warning">
+                <i class="fas fa-calendar-check me-2"></i> Registar Devolução
+              </a>
+            {% endif %}
+            
+            {% if rental.status not in 'completed,cancelled' %}
+              <a href="{% url 'vehicle_rental:rental_edit' rental.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i> Editar
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+        
+        <!-- Display Messages -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+    <!-- Main Content -->
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-car me-2"></i>
+              Detalhes do Aluguer #{{ rental.id|stringformat:"05d" }}
+            </h5>
+          </div>
+          <div class="card-body">
+            
+            <!-- Cliente e Veículo Row -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-user me-2"></i>Informações do Cliente
+                </h6>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-id-card me-1 text-muted"></i>Nome:</strong></div>
+                  <div class="col-8">
+                    <a href="{% url 'vehicle_rental:customer_detail' rental.customer.pk %}" class="text-decoration-none">
+                      {{ rental.customer.first_name }} {{ rental.customer.last_name }}
+                    </a>
+                  </div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-phone me-1 text-muted"></i>Telefone:</strong></div>
+                  <div class="col-8">{{ rental.customer.phone_number }}</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-envelope me-1 text-muted"></i>Email:</strong></div>
+                  <div class="col-8">{{ rental.customer.email }}</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-id-badge me-1 text-muted"></i>Carta:</strong></div>
+                  <div class="col-8">{{ rental.customer.driving_license_number }}</div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-car me-2"></i>Informações do Veículo
+                </h6>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-hashtag me-1 text-muted"></i>Matrícula:</strong></div>
+                  <div class="col-8">
+                    <a href="{% url 'vehicle_rental:vehicle_detail' rental.vehicle.pk %}" class="text-decoration-none">
+                      {{ rental.vehicle.registration_number }}
+                    </a>
+                  </div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-industry me-1 text-muted"></i>Marca/Modelo:</strong></div>
+                  <div class="col-8">{{ rental.vehicle.brand.name }} {{ rental.vehicle.model }}</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-calendar me-1 text-muted"></i>Ano:</strong></div>
+                  <div class="col-8">{{ rental.vehicle.year }}</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-palette me-1 text-muted"></i>Cor:</strong></div>
+                  <div class="col-8">{{ rental.vehicle.color }}</div>
+                </div>
+              </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <!-- Datas e Condição Row -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-calendar-alt me-2"></i>Datas do Aluguer
+                </h6>
+                <div class="row mb-2">
+                  <div class="col-5"><strong><i class="fas fa-calendar-plus me-1 text-muted"></i>Data do Aluguer:</strong></div>
+                  <div class="col-7">{{ rental.rental_date|date:"d/m/Y" }}</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-5"><strong><i class="fas fa-play me-1 text-muted"></i>Data de Início:</strong></div>
+                  <div class="col-7">{{ rental.start_date|date:"d/m/Y" }}</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-5"><strong><i class="fas fa-stop me-1 text-muted"></i>Data de Fim:</strong></div>
+                  <div class="col-7">{{ rental.end_date|date:"d/m/Y" }}</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-5"><strong><i class="fas fa-calendar-check me-1 text-muted"></i>Devolução Real:</strong></div>
+                  <div class="col-7">
+                    {% if rental.actual_return_date %}
+                      {{ rental.actual_return_date|date:"d/m/Y H:i" }}
+                      {% if rental.is_overdue %}
+                        <span class="badge bg-danger ms-1">Atrasado</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">Não devolvido</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-tachometer-alt me-2"></i>Condição do Veículo
+                </h6>
+                <div class="row mb-2">
+                  <div class="col-6"><strong><i class="fas fa-road me-1 text-muted"></i>Quilometragem Inicial:</strong></div>
+                  <div class="col-6">{{ rental.mileage_start|floatformat:0 }} km</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-6"><strong><i class="fas fa-flag-checkered me-1 text-muted"></i>Quilometragem Final:</strong></div>
+                  <div class="col-6">
+                    {% if rental.mileage_end %}
+                      {{ rental.mileage_end|floatformat:0 }} km
+                    {% else %}
+                      <span class="text-muted">Não registado</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-6"><strong><i class="fas fa-gas-pump me-1 text-muted"></i>Combustível Inicial:</strong></div>
+                  <div class="col-6">{{ rental.fuel_level_start }}%</div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-6"><strong><i class="fas fa-gas-pump me-1 text-muted"></i>Combustível Devolução:</strong></div>
+                  <div class="col-6">
+                    {% if rental.fuel_level_return %}
+                      {{ rental.fuel_level_return }}%
+                    {% else %}
+                      <span class="text-muted">Não registado</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <!-- Resumo Financeiro -->
+            <div class="row">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-coins me-2"></i>Resumo Financeiro
+                </h6>
+                <div class="table-responsive">
+                  <table class="table table-striped">
+                    <tbody>
+                      <tr>
+                        <td><strong><i class="fas fa-calendar-day me-2"></i>Taxa Diária:</strong></td>
+                        <td class="text-end">{{ rental.daily_rate|floatformat:2 }} CV</td>
+                      </tr>
+                      <tr>
+                        <td><strong><i class="fas fa-clock me-2"></i>Dias de Aluguer:</strong></td>
+                        <td class="text-end">{{ rental.get_rental_duration }}</td>
+                      </tr>
+                      <tr>
+                        <td><strong><i class="fas fa-calculator me-2"></i>Subtotal:</strong></td>
+                        <td class="text-end">{{ rental.base_amount|floatformat:2 }} CV</td>
+                      </tr>
+                      {% if rental.commission_percent %}
+                      <tr>
+                        <td><strong><i class="fas fa-percentage me-2"></i>Comissão ({{ rental.commission_percent }}%):</strong></td>
+                        <td class="text-end">-{{ rental.commission_value|floatformat:2 }} CV</td>
+                      </tr>
+                      {% elif rental.commission_amount %}
+                      <tr>
+                        <td><strong><i class="fas fa-euro-sign me-2"></i>Comissão (Valor Fixo):</strong></td>
+                        <td class="text-end">-{{ rental.commission_value|floatformat:2 }} CV</td>
+                      </tr>
+                      {% endif %}
+                      {% if rental.late_return_fee %}
+                      <tr class="table-warning">
+                        <td><strong><i class="fas fa-exclamation-triangle me-2"></i>Taxa de Atraso:</strong></td>
+                        <td class="text-end">{{ rental.late_return_fee|floatformat:2 }} CV</td>
+                      </tr>
+                      {% endif %}
+                      {% if rental.damage_fee %}
+                      <tr class="table-danger">
+                        <td><strong><i class="fas fa-tools me-2"></i>Taxa de Danos:</strong></td>
+                        <td class="text-end">{{ rental.damage_fee|floatformat:2 }} CV</td>
+                      </tr>
+                      {% endif %}
+                      {% if rental.security_deposit %}
+                      <tr class="table-info">
+                        <td><strong><i class="fas fa-shield-alt me-2"></i>Depósito de Segurança:</strong></td>
+                        <td class="text-end">{{ rental.security_deposit|floatformat:2 }} CV</td>
+                      </tr>
+                      {% endif %}
+                      <tr class="table-success">
+                        <td><strong><i class="fas fa-coins me-2"></i>Valor Total:</strong></td>
+                        <td class="text-end"><strong>{{ rental.subtotal|floatformat:2 }} CV</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            {% if rental.notes %}
+            <hr class="my-4">
+            <div class="row">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-sticky-note me-2"></i>Notas
+                </h6>
+                <div class="bg-light p-3 rounded">
+                  {{ rental.notes }}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sidebar -->
+      <div class="col-md-4">
+        <!-- Actions Card -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-cogs me-2"></i>Ações Rápidas
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if rental.status == 'active' %}
+              <button class="btn btn-success w-100 mb-2" onclick="returnVehicle()">
+                <i class="fas fa-check-circle me-2"></i>Devolver Veículo
+              </button>
+            {% endif %}
+            
+            {% if rental.status not in 'completed,cancelled' %}
+              <a href="{% url 'vehicle_rental:rental_edit' rental.pk %}" class="btn btn-primary w-100 mb-2">
+                <i class="fas fa-edit me-2"></i>Editar Aluguer
+              </a>
+            {% endif %}
+            
+            <!-- Photo Management Buttons -->
+            <div class="row mb-2">
+              <div class="col-6">
+                <a href="{% url 'vehicle_rental:rental_photos' rental.pk %}?stage=start" 
+                   class="btn btn-outline-primary w-100 btn-sm">
+                  <i class="fas fa-camera me-1"></i>Fotos Iniciais
+                  <small class="d-block">{{ start_photos_count }} fotos</small>
+                </a>
+              </div>
+              <div class="col-6">
+                <a href="{% url 'vehicle_rental:rental_photos' rental.pk %}?stage=return" 
+                   class="btn btn-outline-secondary w-100 btn-sm">
+                  <i class="fas fa-camera-retro me-1"></i>Fotos Devolução
+                  <small class="d-block">{{ return_photos_count }} fotos</small>
+                </a>
+              </div>
+            </div>
+            
+            <button class="btn btn-outline-info w-100 mb-2" onclick="generateInvoice()">
+              <i class="fas fa-file-invoice me-2"></i>Gerar Fatura
+            </button>
+            
+            <a href="{% url 'vehicle_rental:rental_list' %}" class="btn btn-outline-secondary w-100">
+              <i class="fas fa-list me-2"></i>Ver Todos os Alugueres
+            </a>
+          </div>
+        </div>
+        
+        <!-- Expenses Card -->
+        <div class="card shadow-sm">
+          <div class="card-header bg-warning text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-receipt me-2"></i>Despesas Relacionadas
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if expenses %}
+              {% for expense in expenses %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                  <div>
+                    <strong class="d-block">{{ expense.description }}</strong>
+                    <small class="text-muted">
+                      <i class="fas fa-calendar me-1"></i>{{ expense.expense_date|date:"d/m/Y" }}
+                    </small>
+                  </div>
+                  <div>
+                    <span class="badge bg-info fs-6">{{ expense.amount|floatformat:2 }} CV</span>
+                  </div>
+                </div>
+              {% endfor %}
+              <hr>
+              <div class="d-flex justify-content-between align-items-center">
+                <strong class="text-primary">
+                  <i class="fas fa-calculator me-1"></i>Total de Despesas:
+                </strong>
+                <strong class="text-primary fs-5">{{ total_expenses|floatformat:2 }} CV</strong>
+              </div>
+            {% else %}
+              <div class="text-center py-3">
+                <i class="fas fa-receipt text-muted" style="font-size: 2rem;"></i>
+                <p class="text-muted mt-2 mb-0">Nenhuma despesa registada.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Customer Evaluation Card -->
+        {% if rental.status == 'completed' %}
+        <div class="card shadow-sm">
+          <div class="card-header bg-{% if evaluation %}success{% else %}info{% endif %} text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-star me-2"></i>Avaliação do Cliente
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if evaluation %}
+              <!-- Evaluation exists -->
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <strong>Avaliação Geral:</strong>
+                  <div class="d-flex align-items-center">
+                    <span class="me-2">{{ evaluation.rating_stars }}</span>
+                    <span class="badge bg-primary">{{ evaluation.overall_rating }}/5</span>
+                  </div>
+                </div>
+                
+                <div class="row text-sm">
+                  <div class="col-12 mb-1">
+                    <span class="text-muted">Condição do Veículo:</span>
+                    <span class="float-end">
+                      {% for i in "12345"|make_list %}
+                        {% if forloop.counter <= evaluation.vehicle_condition_rating %}
+                          <i class="fas fa-star text-warning"></i>
+                        {% else %}
+                          <i class="far fa-star text-muted"></i>
+                        {% endif %}
+                      {% endfor %}
+                      ({{ evaluation.vehicle_condition_rating }}/5)
+                    </span>
+                  </div>
+                  
+                  <div class="col-12 mb-1">
+                    <span class="text-muted">Qualidade do Serviço:</span>
+                    <span class="float-end">
+                      {% for i in "12345"|make_list %}
+                        {% if forloop.counter <= evaluation.service_quality_rating %}
+                          <i class="fas fa-star text-warning"></i>
+                        {% else %}
+                          <i class="far fa-star text-muted"></i>
+                        {% endif %}
+                      {% endfor %}
+                      ({{ evaluation.service_quality_rating }}/5)
+                    </span>
+                  </div>
+                  
+                  <div class="col-12 mb-1">
+                    <span class="text-muted">Relação Qualidade/Preço:</span>
+                    <span class="float-end">
+                      {% for i in "12345"|make_list %}
+                        {% if forloop.counter <= evaluation.value_for_money_rating %}
+                          <i class="fas fa-star text-warning"></i>
+                        {% else %}
+                          <i class="far fa-star text-muted"></i>
+                        {% endif %}
+                      {% endfor %}
+                      ({{ evaluation.value_for_money_rating }}/5)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span><i class="fas fa-thumbs-up me-1"></i>Recomendaria:</span>
+                  <span class="badge bg-{% if evaluation.would_recommend %}success{% else %}warning{% endif %}">
+                    {% if evaluation.would_recommend %}
+                      <i class="fas fa-check me-1"></i>Sim
+                    {% else %}
+                      <i class="fas fa-times me-1"></i>Não
+                    {% endif %}
+                  </span>
+                </div>
+              </div>
+
+              {% if evaluation.comments %}
+              <div class="mb-3">
+                <strong><i class="fas fa-comment me-1"></i>Comentários:</strong>
+                <div class="mt-2 p-2 bg-light rounded">
+                  <em>"{{ evaluation.comments }}"</em>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if evaluation.had_issues %}
+              <div class="mb-3">
+                <div class="alert alert-warning py-2 mb-2">
+                  <strong><i class="fas fa-exclamation-triangle me-1"></i>Problemas Reportados:</strong>
+                </div>
+                {% if evaluation.issue_description %}
+                <div class="p-2 bg-warning bg-opacity-10 rounded">
+                  <small>{{ evaluation.issue_description }}</small>
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              <div class="text-center">
+                <small class="text-muted">
+                  <i class="fas fa-calendar me-1"></i>Avaliado em {{ evaluation.created_at|date:"d/m/Y H:i" }}
+                </small>
+              </div>
+
+            {% else %}
+              <!-- No evaluation yet -->
+              <div class="text-center py-3">
+                <i class="fas fa-star-half-alt text-muted" style="font-size: 2rem;"></i>
+                <p class="text-muted mt-2 mb-3">O cliente ainda não avaliou este aluguer.</p>
+                <small class="text-muted">A avaliação estará disponível após o cliente submeter o seu feedback.</small>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize any additional functionality if needed
+});
+
+function returnVehicle() {
+    if (confirm('Tem certeza que deseja processar a devolução do veículo?')) {
+        window.location.href = '{% url "vehicle_rental:rental_return" rental.pk %}';
+    }
+}
+
+function generateInvoice() {
+    window.open('{% url "vehicle_rental:rental_invoice" rental.pk %}', '_blank');
+}
+</script>
+{% endblock extra_js %}

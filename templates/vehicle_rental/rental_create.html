@@ -1,0 +1,452 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{% if rental %}Editar Aluguer{% else %}Criar Aluguer{% endif %}{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">{% if rental %}Editar Aluguer #{{ rental.id }}{% else %}Criar Novo Aluguer{% endif %}</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_list' %}">Alugueres</a></li>
+          <li class="breadcrumb-item active">{% if rental %}Editar Aluguer{% else %}Criar Aluguer{% endif %}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>{% if rental %}Editar Aluguer #{{ rental.id }}{% else %}Criar Novo Aluguer{% endif %}</h5>
+            <div class="card-header-right">
+              <a href="{% url 'vehicle_rental:rental_list' %}" class="btn btn-secondary btn-sm">
+                <i data-feather="arrow-left"></i> Voltar aos Alugueres
+              </a>
+              {% if rental %}
+                <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}" class="btn btn-info btn-sm">
+                  <i data-feather="eye"></i> Ver Aluguer
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-body">
+            
+            <!-- Display Messages -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+            
+            <form method="post" novalidate>
+              {% csrf_token %}
+              
+              <!-- Customer & Vehicle Selection Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-3">
+                    <i data-feather="users" class="me-2"></i>
+                    Seleção de Cliente e Veículo
+                  </h6>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.customer.id_for_label }}" class="form-label required">Cliente</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                      <div class="text-danger">
+                        {% for error in form.customer.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">
+                      Selecionar cliente ou 
+                      <a href="{% url 'vehicle_rental:customer_create' %}" target="_blank" class="text-decoration-none">
+                        <i data-feather="plus" style="width: 14px; height: 14px;"></i> adicionar novo
+                      </a>
+                    </small>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.vehicle.id_for_label }}" class="form-label required">Veículo</label>
+                    {{ form.vehicle }}
+                    {% if form.vehicle.errors %}
+                      <div class="text-danger">
+                        {% for error in form.vehicle.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Apenas veículos disponíveis mostrados</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rental Period Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="calendar" class="me-2"></i>
+                    Período do Aluguer
+                  </h6>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.start_date.id_for_label }}" class="form-label required">Data de Início</label>
+                    {{ form.start_date }}
+                    {% if form.start_date.errors %}
+                      <div class="text-danger">
+                        {% for error in form.start_date.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.end_date.id_for_label }}" class="form-label required">Data de Fim</label>
+                    {{ form.end_date }}
+                    {% if form.end_date.errors %}
+                      <div class="text-danger">
+                        {% for error in form.end_date.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">Duração</label>
+                    <input type="text" id="duration" class="form-control" readonly placeholder="Calculado automaticamente">
+                    <small class="form-text text-muted">Calculado automaticamente</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pricing Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="dollar-sign" class="me-2"></i>
+                    Informações de Preço
+                  </h6>
+                </div>
+                
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label for="{{ form.daily_rate.id_for_label }}" class="form-label required">Taxa Diária (ECV)</label>
+                    {{ form.daily_rate }}
+                    {% if form.daily_rate.errors %}
+                      <div class="text-danger">
+                        {% for error in form.daily_rate.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label for="{{ form.commission_percent.id_for_label }}" class="form-label">Taxa de Comissão (%)</label>
+                    {{ form.commission_percent }}
+                    {% if form.commission_percent.errors %}
+                      <div class="text-danger">
+                        {% for error in form.commission_percent.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Use percentagem OU valor fixo (obrigatório)</small>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label for="{{ form.commission_amount.id_for_label }}" class="form-label">Taxa de Comissão (ECV)</label>
+                    {{ form.commission_amount }}
+                    {% if form.commission_amount.errors %}
+                      <div class="text-danger">
+                        {% for error in form.commission_amount.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Use valor fixo OU percentagem (obrigatório)</small>
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label class="form-label">Valor Total (ECV)</label>
+                    <input type="text" id="total" class="form-control" readonly placeholder="Calculado automaticamente">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vehicle Details Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="settings" class="me-2"></i>
+                    Detalhes do Veículo
+                  </h6>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.mileage_start.id_for_label }}" class="form-label">Quilometragem Inicial (km)</label>
+                    {{ form.mileage_start }}
+                    {% if form.mileage_start.errors %}
+                      <div class="text-danger">
+                        {% for error in form.mileage_start.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.fuel_level_start.id_for_label }}" class="form-label">Nível de Combustível Inicial (%)</label>
+                    {{ form.fuel_level_start }}
+                    {% if form.fuel_level_start.errors %}
+                      <div class="text-danger">
+                        {% for error in form.fuel_level_start.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.security_deposit.id_for_label }}" class="form-label">Depósito de Segurança (ECV)</label>
+                    {{ form.security_deposit }}
+                    {% if form.security_deposit.errors %}
+                      <div class="text-danger">
+                        {% for error in form.security_deposit.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notes Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="message-square" class="me-2"></i>
+                    Informações Adicionais
+                  </h6>
+                </div>
+                
+                <div class="col-12">
+                  <div class="form-group">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">Notas</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                      <div class="text-danger">
+                        {% for error in form.notes.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Adicionar instruções especiais ou comentários</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="row">
+                <div class="col-12">
+                  <div class="form-actions mt-4">
+                    <button type="submit" class="btn btn-primary">
+                      <i data-feather="save"></i> {% if rental %}Atualizar Aluguer{% else %}Criar Aluguer{% endif %}
+                    </button>
+                    <a href="{% url 'vehicle_rental:rental_list' %}" class="btn btn-secondary ms-2">
+                      <i data-feather="x"></i> Cancelar
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize feather icons
+    feather.replace();
+    
+    // Add required indicator styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .form-label.required::after {
+            content: ' *';
+            color: red;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Calculate duration and total when dates or rates change
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    const dailyRateInput = document.getElementById('id_daily_rate');
+    const commissionRateInput = document.getElementById('id_commission_percent');
+    const commissionAmountInput = document.getElementById('id_commission_amount');
+    const durationInput = document.getElementById('duration');
+    const totalInput = document.getElementById('total');
+    
+    function calculateTotals() {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const dailyRate = parseFloat(dailyRateInput.value) || 0;
+        const commissionRate = parseFloat(commissionRateInput.value) || 0;
+        const commissionAmount = parseFloat(commissionAmountInput.value) || 0;
+        
+        if (startDate && endDate && dailyRate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const timeDiff = end.getTime() - start.getTime();
+            const daysDiff = Math.max(1, Math.floor(timeDiff / (1000 * 3600 * 24))); // Keep original working calculation
+            
+            if (daysDiff > 0) {
+                durationInput.value = daysDiff + ' dias';
+                
+                const subtotal = daysDiff * dailyRate;
+                let commission = 0;
+                
+                // Calculate commission based on either percentage or fixed amount
+                if (commissionRate > 0) {
+                    commission = subtotal * (commissionRate / 100);
+                } else if (commissionAmount > 0) {
+                    commission = commissionAmount;
+                }
+                
+                const total = subtotal - commission; // Commission decreases the total
+                
+                totalInput.value = total.toFixed(2) + ' ECV';
+            } else {
+                durationInput.value = 'Datas inválidas';
+                totalInput.value = '';
+            }
+        } else {
+            durationInput.value = '';
+            totalInput.value = '';
+        }
+    }
+    
+    // Clear the other commission field when one is entered
+    function clearOtherCommissionField(keepField) {
+        if (keepField === 'percent') {
+            // Clear amount field when percentage is entered
+            commissionAmountInput.value = '';
+        } else if (keepField === 'amount') {
+            // Clear percentage field when amount is entered
+            commissionRateInput.value = '';
+        }
+        calculateTotals();
+    }
+    
+    // Add event listeners
+    if (startDateInput) startDateInput.addEventListener('change', calculateTotals);
+    if (endDateInput) endDateInput.addEventListener('change', calculateTotals);
+    if (dailyRateInput) dailyRateInput.addEventListener('change', calculateTotals);
+    
+    // Commission percentage field - clear amount field when typing
+    if (commissionRateInput) {
+        commissionRateInput.addEventListener('input', () => {
+            if (commissionRateInput.value.trim() !== '') {
+                clearOtherCommissionField('percent');
+            }
+        });
+        commissionRateInput.addEventListener('focus', () => {
+            if (commissionRateInput.value.trim() !== '') {
+                clearOtherCommissionField('percent');
+            }
+        });
+    }
+    
+    // Commission amount field - clear percentage field when typing
+    if (commissionAmountInput) {
+        commissionAmountInput.addEventListener('input', () => {
+            if (commissionAmountInput.value.trim() !== '') {
+                clearOtherCommissionField('amount');
+            }
+        });
+        commissionAmountInput.addEventListener('focus', () => {
+            if (commissionAmountInput.value.trim() !== '') {
+                clearOtherCommissionField('amount');
+            }
+        });
+    }
+    
+    // Load vehicle daily rate when vehicle is selected
+    const vehicleSelect = document.getElementById('id_vehicle');
+    const mileageStartInput = document.getElementById('id_mileage_start');
+    
+    if (vehicleSelect) {
+        vehicleSelect.addEventListener('change', function() {
+            const vehicleId = this.value;
+            if (vehicleId) {
+                fetch('/vehicle-rental/api/vehicles/' + vehicleId + '/')
+                    .then(response => response.json())
+                    .then(vehicle => {
+                        if (dailyRateInput) dailyRateInput.value = vehicle.daily_rate;
+                        if (mileageStartInput) mileageStartInput.value = vehicle.mileage;
+                        calculateTotals();
+                    })
+                    .catch(error => console.error('Erro ao carregar dados do veículo:', error));
+            } else {
+                if (dailyRateInput) dailyRateInput.value = '';
+                if (mileageStartInput) mileageStartInput.value = '';
+                calculateTotals();
+            }
+        });
+    }
+    
+    // Set default start date to today
+    if (startDateInput && !startDateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        startDateInput.value = today;
+    }
+    
+    // Initial calculation if values are present
+    calculateTotals();
+});
+</script>
+{% endblock extra_js %}

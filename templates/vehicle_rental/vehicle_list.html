@@ -1,0 +1,357 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Lista de Veículos | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Gestão de Veículos</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item active">Veículos</li>
+        </ul>
+      </div>
+    </div>
+
+<!-- Filters and Actions -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-filter text-primary me-2"></i>
+          Filtrar Veículos
+        </h5>
+        <div class="card-header-right">
+          <a href="{% url 'vehicle_rental:vehicle_create' %}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i> Adicionar Veículo
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <div class="col-md-3">
+            <label for="brand" class="form-label fw-bold">
+              <i class="fas fa-car me-1 text-muted"></i>
+              Marca
+            </label>
+            <select name="brand" id="brand" class="form-select">
+              <option value="">Todas as Marcas</option>
+              {% for brand in brands %}
+                <option value="{{ brand.id }}" {% if current_brand == brand.id|stringformat:"s" %}selected{% endif %}>
+                  {{ brand.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="status" class="form-label fw-bold">
+              <i class="fas fa-flag me-1 text-muted"></i>
+              Estado
+            </label>
+            <select name="status" id="status" class="form-select">
+              <option value="">Todos os Estados</option>
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label for="search" class="form-label fw-bold">
+              <i class="fas fa-search me-1 text-muted"></i>
+              Pesquisar
+            </label>
+            <input type="text" name="search" id="search" class="form-control" 
+                   placeholder="Número de registo, modelo..." value="{{ current_search }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <div>
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search me-1"></i>
+                Filtrar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-3">
+  <div class="col-md-3">
+    <div class="card bg-primary text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Total de Veículos</h6>
+            <h5 class="mb-0 fw-bold">{{ total_vehicles|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-car" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-success text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Disponíveis</h6>
+            <h5 class="mb-0 fw-bold">{{ available_vehicles|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-check-circle" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-warning text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Alugados</h6>
+            <h5 class="mb-0 fw-bold">{{ rented_vehicles|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-calendar-alt" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-info text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Em Manutenção</h6>
+            <h5 class="mb-0 fw-bold">{{ maintenance_vehicles|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-cog fa-spin" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle List -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light border-bottom">
+        <h5 class="mb-0 text-primary fw-bold">
+          <i class="fas fa-car me-2"></i>
+          Lista de Veículos 
+          <span class="text-muted fw-normal">({{ page_obj.paginator.count }} total)</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if page_obj %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-hashtag me-2"></i>Registo
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-car me-2"></i>Informações do Veículo
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-calendar me-2"></i>Ano
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>Estado
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-coins me-2"></i>Preço/Dia
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-tachometer-alt me-2"></i>Quilometragem
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-cogs me-2"></i>Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for vehicle in page_obj %}
+                <tr>
+                  <td class="ps-4">
+                    <strong class="text-primary">{{ vehicle.registration_number }}</strong>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      {% if vehicle.photo %}
+                        <img src="{{ vehicle.photo.url }}" 
+                             alt="Foto do veículo {{ vehicle.registration_number }}" 
+                             class="rounded me-3 shadow-sm"
+                             style="width: 50px; height: 50px; object-fit: cover;">
+                      {% else %}
+                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center"
+                             style="width: 50px; height: 50px;">
+                          <i class="fas fa-car text-muted"></i>
+                        </div>
+                      {% endif %}
+                      <div>
+                        <strong>{{ vehicle.brand.name }} {{ vehicle.model }}</strong>
+                        <br>
+                        <small class="text-muted">
+                          <i class="fas fa-circle" style="width: 12px; height: 12px; color: {{ vehicle.color|lower }};"></i> {{ vehicle.color }} • 
+                          <i class="fas fa-gas-pump" style="width: 12px; height: 12px;"></i> {{ vehicle.get_fuel_type_display }} • 
+                          <i class="fas fa-cogs" style="width: 12px; height: 12px;"></i> {{ vehicle.get_gearbox_type_display }}
+                        </small>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge bg-secondary">{{ vehicle.year }}</span></td>
+                  <td>
+                    <span class="badge badge-{% if vehicle.status == 'available' %}success{% elif vehicle.status == 'rented' %}warning{% elif vehicle.status == 'maintenance' %}info{% else %}secondary{% endif %}">
+                      {{ vehicle.get_status_display }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong class="text-success">{{ vehicle.daily_rate|floatformat:0 }} ECV</strong>
+                    <small class="text-muted d-block">por dia</small>
+                  </td>
+                  <td>
+                    <span class="fw-bold">{{ vehicle.mileage|floatformat:0 }}</span>
+                    <small class="text-muted">km</small>
+                  </td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <a href="{% url 'vehicle_rental:vehicle_detail' vehicle.pk %}" 
+                         class="btn btn-sm btn-primary text-white me-1 shadow-sm" 
+                         title="Ver Detalhes" data-bs-toggle="tooltip">
+                        <i class="fas fa-eye me-1"></i>
+                        <span class="d-none d-md-inline">Ver</span>
+                      </a>
+                      <a href="{% url 'vehicle_rental:vehicle_edit' vehicle.pk %}" 
+                         class="btn btn-sm btn-outline-primary me-1 shadow-sm" 
+                         title="Editar" data-bs-toggle="tooltip">
+                        <i class="fas fa-edit me-1"></i>
+                        <span class="d-none d-md-inline">Editar</span>
+                      </a>
+                      {% if vehicle.status == 'available' %}
+                      <a href="{% url 'vehicle_rental:rental_create' %}?vehicle={{ vehicle.pk }}" 
+                         class="btn btn-sm btn-outline-success shadow-sm" 
+                         title="Criar Aluguer" data-bs-toggle="tooltip">
+                        <i class="fas fa-calendar-plus me-1"></i>
+                        <span class="d-none d-md-inline">Alugar</span>
+                      </a>
+                      {% elif vehicle.status == 'rented' %}
+                      {% comment %}Show photos button for rented vehicles with recent rental{% endcomment %}
+                      {% with current_rental=vehicle.rentals.first %}
+                        {% if current_rental and current_rental.status != 'completed' and current_rental.status != 'cancelled' %}
+                        <a href="{% url 'vehicle_rental:rental_photos' current_rental.pk %}" 
+                           class="btn btn-sm btn-outline-info shadow-sm" 
+                           title="Gerir Fotos do Aluguer #{{ current_rental.id }}" data-bs-toggle="tooltip">
+                          <i class="fas fa-camera me-1"></i>
+                          <span class="d-none d-md-inline">Fotos</span>
+                        </a>
+                        {% endif %}
+                      {% endwith %}
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          {% if page_obj.has_other_pages %}
+          <div class="card-footer bg-light">
+            <nav aria-label="Paginação de veículos">
+              <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                      <i class="fas fa-chevron-left"></i> Anterior
+                    </a>
+                  </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                  {% if page_obj.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                      Próximo <i class="fas fa-chevron-right"></i>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
+          {% endif %}
+
+        {% else %}
+          <div class="text-center py-5">
+            <div class="mb-4">
+              <i class="fas fa-car text-muted" style="font-size: 4rem;"></i>
+            </div>
+            <h5 class="text-muted mb-3">Nenhum veículo encontrado</h5>
+            <p class="text-muted mb-4">Tente ajustar os filtros ou adicione um novo veículo para começar.</p>
+            <a href="{% url 'vehicle_rental:vehicle_create' %}" class="btn btn-success btn-lg">
+              <i class="fas fa-plus me-2"></i> Adicionar Primeiro Veículo
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-submit form on select change
+    $('#brand, #status').change(function() {
+        $(this).closest('form').submit();
+    });
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock extra_js %}

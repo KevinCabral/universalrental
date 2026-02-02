@@ -1,0 +1,255 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{% if expense %}Editar Despesa{% else %}Adicionar Despesa{% endif %}{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">{% if expense %}Editar Despesa{% else %}Adicionar Nova Despesa{% endif %}</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:expense_list' %}">Despesas</a></li>
+          <li class="breadcrumb-item active">{% if expense %}Editar Despesa{% else %}Adicionar Despesa{% endif %}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>{% if expense %}Editar Despesa{% else %}Adicionar Nova Despesa{% endif %}</h5>
+            <div class="card-header-right">
+              <a href="{% url 'vehicle_rental:expense_list' %}" class="btn btn-secondary btn-sm">
+                <i data-feather="arrow-left"></i> Voltar às Despesas
+              </a>
+              {% if expense %}
+                <a href="{% url 'vehicle_rental:expense_detail' expense.pk %}" class="btn btn-info btn-sm">
+                  <i data-feather="eye"></i> Ver Despesa
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-body">
+            
+            <!-- Display Messages -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+
+            <form method="post" id="expenseForm" novalidate>
+              {% csrf_token %}
+
+              <!-- Informações Básicas -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-3">
+                    <i data-feather="info" class="me-2"></i>
+                    Informações Básicas
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.vehicle.id_for_label }}" class="form-label">
+                      Veículo <span class="text-danger">*</span>
+                    </label>
+                    {{ form.vehicle }}
+                    {% if form.vehicle.errors %}
+                      <div class="text-danger small">{{ form.vehicle.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.category.id_for_label }}" class="form-label">
+                      Categoria <span class="text-danger">*</span>
+                    </label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                      <div class="text-danger small">{{ form.category.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.date.id_for_label }}" class="form-label">
+                      Data <span class="text-danger">*</span>
+                    </label>
+                    {{ form.date }}
+                    {% if form.date.errors %}
+                      <div class="text-danger small">{{ form.date.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.amount.id_for_label }}" class="form-label">
+                      Valor <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                      <span class="input-group-text">€</span>
+                      {{ form.amount }}
+                    </div>
+                    {% if form.amount.errors %}
+                      <div class="text-danger small">{{ form.amount.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Informações Adicionais -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="file-text" class="me-2"></i>
+                    Informações Adicionais
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.rental.id_for_label }}" class="form-label">
+                      Aluguer Relacionado
+                    </label>
+                    {{ form.rental }}
+                    {% if form.rental.errors %}
+                      <div class="text-danger small">{{ form.rental.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">Opcional - associar a um aluguer específico</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.receipt_number.id_for_label }}" class="form-label">
+                      Número do Recibo
+                    </label>
+                    {{ form.receipt_number }}
+                    {% if form.receipt_number.errors %}
+                      <div class="text-danger small">{{ form.receipt_number.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.vendor.id_for_label }}" class="form-label">
+                      Fornecedor
+                    </label>
+                    {{ form.vendor }}
+                    {% if form.vendor.errors %}
+                      <div class="text-danger small">{{ form.vendor.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12">
+                  <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">
+                      Descrição <span class="text-danger">*</span>
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                      <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">Forneça detalhes sobre a despesa</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botões de Submissão -->
+              <div class="row">
+                <div class="col-12">
+                  <hr class="mb-4 mt-4">
+                  <div class="d-flex justify-content-between">
+                    <a href="{% url 'vehicle_rental:expense_list' %}" class="btn btn-secondary">
+                      <i data-feather="arrow-left" class="me-1"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                      <i data-feather="{% if expense %}save{% else %}plus{% endif %}" class="me-1"></i>
+                      {% if expense %}Atualizar Despesa{% else %}Criar Despesa{% endif %}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize feather icons
+    feather.replace();
+    
+    // Form validation feedback
+    $('#expenseForm').on('submit', function() {
+        $(this).find('button[type="submit"]').prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> A processar...'
+        );
+    });
+    
+    // Vehicle selection changes rental options
+    $('#id_vehicle').on('change', function() {
+        var vehicleId = $(this).val();
+        var rentalSelect = $('#id_rental');
+        
+        if (vehicleId) {
+            // Clear current options
+            rentalSelect.empty().append('<option value="">---------</option>');
+            
+            // Fetch rentals for this vehicle via AJAX
+            $.get('/vehicle-rental/api/rentals/', {
+                vehicle: vehicleId
+            }, function(data) {
+                if (data.results) {
+                    data.results.forEach(function(rental) {
+                        var optionText = '#' + rental.id + ' - ' + rental.customer.name + 
+                                       ' (' + rental.start_date + ' a ' + rental.end_date + ')';
+                        rentalSelect.append(
+                            $('<option></option>').attr('value', rental.id).text(optionText)
+                        );
+                    });
+                }
+            }).fail(function() {
+                console.log('Falha ao carregar alugueres para o veículo');
+            });
+        } else {
+            rentalSelect.empty().append('<option value="">---------</option>');
+        }
+    });
+});
+</script>
+{% endblock extra_js %}

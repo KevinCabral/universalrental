@@ -1,0 +1,567 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Fotos do Aluguer | Sistema de Aluguer{% endblock %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="mb-2">
+            <i class="fas fa-camera me-2 text-primary"></i>
+            Fotos do Aluguer #{{ rental.id }}
+          </h5>
+          <p class="text-muted">
+            {{ rental.vehicle }} - {{ rental.customer.first_name }} {{ rental.customer.last_name }}
+          </p>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a>
+          </li>
+          <li class="breadcrumb-item">
+            <a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a>
+          </li>
+          <li class="breadcrumb-item">
+            <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}">Aluguer #{{ rental.id }}</a>
+          </li>
+          <li class="breadcrumb-item active">Fotos</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Photo Stage Navigation -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="btn-group w-100" role="group">
+              <a href="?stage=start" 
+                 class="btn {% if stage == 'start' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="fas fa-play me-2"></i>Fotos Iniciais
+                <span class="badge bg-light text-dark ms-2">{{ start_photos_count }}</span>
+              </a>
+              <a href="?stage=return" 
+                 class="btn {% if stage == 'return' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="fas fa-check me-2"></i>Fotos de Devolução
+                <span class="badge bg-light text-dark ms-2">{{ return_photos_count }}</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Photo Upload Form -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary fw-bold">
+              <i class="fas fa-camera-retro me-2"></i>
+              {% if stage == 'start' %}Adicionar Fotos Iniciais{% else %}Adicionar Fotos de Devolução{% endif %}
+            </h5>
+            <!-- Photo Progress Indicator -->
+            <div class="photo-progress d-flex align-items-center">
+              <span class="badge bg-primary me-2" id="photoCount">0 fotos</span>
+              <div class="progress" style="width: 100px; height: 8px;">
+                <div class="progress-bar" role="progressbar" id="photoProgressBar" 
+                     style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            
+            <!-- Messages -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+
+            <!-- Add Photo Button -->
+            <div class="mb-4 text-center">
+              <p class="text-muted">Fill in the forms below to add photos. Leave unused forms empty.</p>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" id="photoForm">
+              {% csrf_token %}
+              
+              <!-- Single Photo Upload Form -->
+              <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                  <h6 class="mb-0 text-secondary">
+                    <i class="fas fa-image me-2"></i>
+                    Adicionar Nova Foto
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3">
+                    <!-- Photo Type Selection -->
+                    <div class="col-12 col-md-6 col-lg-4">
+                      <div class="form-group">
+                        <label class="form-label fw-semibold text-primary">
+                          <i class="fas fa-tags me-1"></i>Tipo de Foto
+                        </label>
+                        <select name="photo_type" class="form-select" required>
+                          <option value="">Selecionar tipo...</option>
+                          {% if stage == 'start' %}
+                            <option value="start_exterior_front">Inicial - Exterior Frente</option>
+                            <option value="start_exterior_back">Inicial - Exterior Traseira</option>
+                            <option value="start_exterior_left">Inicial - Exterior Esquerda</option>
+                            <option value="start_exterior_right">Inicial - Exterior Direita</option>
+                            <option value="start_interior_front">Inicial - Interior Frente</option>
+                            <option value="start_interior_back">Inicial - Interior Traseira</option>
+                            <option value="start_dashboard">Inicial - Painel</option>
+                            <option value="start_damage">Inicial - Danos Existentes</option>
+                          {% else %}
+                            <option value="return_exterior_front">Devolução - Exterior Frente</option>
+                            <option value="return_exterior_back">Devolução - Exterior Traseira</option>
+                            <option value="return_exterior_left">Devolução - Exterior Esquerda</option>
+                            <option value="return_exterior_right">Devolução - Exterior Direita</option>
+                            <option value="return_interior_front">Devolução - Interior Frente</option>
+                            <option value="return_interior_back">Devolução - Interior Traseira</option>
+                            <option value="return_dashboard">Devolução - Painel</option>
+                            <option value="return_damage">Devolução - Novos Danos</option>
+                            <option value="return_fuel_gauge">Devolução - Medidor Combustível</option>
+                          {% endif %}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <!-- File Upload -->
+                    <div class="col-12 col-md-6 col-lg-4">
+                      <div class="form-group">
+                        <label class="form-label fw-semibold text-primary">
+                          <i class="fas fa-upload me-1"></i>Imagem
+                        </label>
+                        <input type="file" name="image" class="form-control" accept="image/*" required>
+                      </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="col-12 col-lg-4">
+                      <div class="form-group">
+                        <label class="form-label fw-semibold text-primary">
+                          <i class="fas fa-comment me-1"></i>Descrição (Opcional)
+                        </label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Descreva detalhes específicos..."></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions mt-4 d-flex flex-column flex-sm-row gap-2">
+                <button type="submit" class="btn btn-success btn-lg flex-fill">
+                  <i class="fas fa-save me-2"></i>
+                  Guardar Fotos
+                </button>
+                <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}" class="btn btn-secondary btn-lg flex-fill">
+                  <i class="fas fa-arrow-left me-2"></i>Voltar
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Existing Photos Gallery -->
+    {% if existing_photos %}
+    <div class="row mt-4">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="mb-0 text-primary fw-bold">
+              <i class="fas fa-images me-2"></i>
+              Fotos Existentes - {% if stage == 'start' %}Iniciais{% else %}Devolução{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              {% for photo in existing_photos %}
+                <div class="col-md-4 col-lg-3 mb-4">
+                  <div class="card position-relative">
+                    <!-- Delete Button positioned above the photo -->
+                    <div class="position-absolute top-0 end-0 p-2" style="z-index: 10;">
+                      <button type="button" class="btn btn-danger btn-sm" onclick="deletePhoto({{ photo.id }})" 
+                              title="Apagar esta foto">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                    
+                    <img src="{{ photo.image.url }}" class="card-img-top" alt="{{ photo.get_photo_type_display }}" 
+                         style="height: 200px; object-fit: cover; cursor: pointer;" 
+                         onclick="openImageModal('{{ photo.image.url }}', '{{ photo.get_photo_type_display }}')">
+                    <div class="card-body p-2">
+                      <h6 class="card-title small mb-1">{{ photo.get_photo_type_display }}</h6>
+                      {% if photo.description %}
+                        <p class="card-text small text-muted">{{ photo.description }}</p>
+                      {% endif %}
+                      <small class="text-muted">{{ photo.taken_at|date:"d/m/Y H:i" }}</small>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imageModalTitle">Visualizar Foto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modalImage" class="img-fluid" alt="Foto ampliada">
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<style>
+/* Enhanced Photo Form Styles */
+.photo-form-group {
+  transition: all 0.3s ease;
+  border: 2px solid transparent !important;
+}
+
+.photo-form-group:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,123,255,0.15) !important;
+  border-color: #007bff !important;
+}
+
+.photo-form-group.has-image {
+  border-color: #28a745 !important;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.photo-form-group.has-error {
+  border-color: #dc3545 !important;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+}
+
+/* Custom File Upload Styling */
+.custom-file-upload {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.custom-file-upload input[type="file"] {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.file-upload-label {
+  display: block;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: none;
+  font-weight: 500;
+  margin: 0;
+}
+
+.file-upload-label:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+  color: white;
+}
+
+.file-upload-label.has-file {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+.file-upload-label.has-file:hover {
+  background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+}
+
+/* Image Preview Enhancements */
+.image-preview-container {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.image-preview-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.image-preview-wrapper:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.preview-overlay {
+  background: rgba(0,0,0,0.7);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 12px;
+}
+
+.image-preview-wrapper:hover .preview-overlay {
+  opacity: 1;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Progress Indicator */
+.photo-progress {
+  font-size: 0.9rem;
+}
+
+.progress {
+  border-radius: 10px;
+  background-color: #e9ecef;
+}
+
+.progress-bar {
+  border-radius: 10px;
+  transition: width 0.6s ease;
+}
+
+/* Form Controls Enhancement */
+.form-control, .form-select {
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  padding: 10px 14px;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.form-control.is-invalid, .form-select.is-invalid {
+  border-color: #dc3545;
+}
+
+.form-control.is-valid, .form-select.is-valid {
+  border-color: #28a745;
+}
+
+/* Button Enhancements */
+#addPhotoBtn {
+  border: 2px dashed #007bff;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  transition: all 0.3s ease;
+  padding: 16px 32px;
+  border-radius: 12px;
+}
+
+#addPhotoBtn:hover {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,123,255,0.3);
+}
+
+#addPhotoBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.remove-photo-btn {
+  transition: all 0.2s ease;
+}
+
+.remove-photo-btn:hover {
+  transform: scale(1.1);
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: white !important;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.photo-form-group {
+  animation: slideInRight 0.4s ease-out;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .photo-form-group .card-header {
+    padding: 12px 16px;
+  }
+  
+  .photo-form-group .card-body {
+    padding: 16px;
+  }
+  
+  .file-upload-label {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .preview-img {
+    max-width: 100% !important;
+    max-height: 180px !important;
+  }
+  
+  .form-actions {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 16px;
+    margin: 0 -16px -16px -16px;
+    border-top: 1px solid #dee2e6;
+    z-index: 100;
+  }
+}
+
+@media (max-width: 576px) {
+  #addPhotoBtn {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+  }
+  
+  .photo-progress {
+    font-size: 0.8rem;
+  }
+  
+  .progress {
+    width: 80px !important;
+    height: 6px !important;
+  }
+}
+
+/* Existing Photos Gallery */
+.card-img-top:hover {
+  opacity: 0.8;
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+}
+
+/* Duplicate Prevention Styling */
+.form-select.duplicate-warning {
+  border-color: #ffc107 !important;
+  background-color: #fff3cd;
+}
+
+.duplicate-warning-text {
+  color: #856404;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-top: 5px;
+}
+</style>
+
+<script>
+console.log('Simple photo form script loaded');
+
+// Individual photo deletion function (global scope)
+function deletePhoto(photoId) {
+    if (confirm('Tem certeza que deseja apagar esta foto? Esta ação não pode ser desfeita.')) {
+        // Create a form to submit the deletion
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.location.href;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        // Add delete photo ID
+        const deleteInput = document.createElement('input');
+        deleteInput.type = 'hidden';
+        deleteInput.name = 'delete_photo_id';
+        deleteInput.value = photoId;
+        form.appendChild(deleteInput);
+        
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function openImageModal(imageUrl, title) {
+    document.getElementById('modalImage').src = imageUrl;
+    document.getElementById('imageModalTitle').textContent = title;
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+}
+
+// Simple form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('photoForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('Form being submitted');
+            
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>A guardar...';
+            }
+        });
+    }
+});
+</script>
+{% endblock extra_js %}

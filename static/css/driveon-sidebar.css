@@ -1,0 +1,177 @@
+/* DriveOn Car Rental - Enhanced Sidebar Styling */
+
+/* Import Google Fonts for better typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Main sidebar styling */
+.pc-sidebar {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Logo animations */
+@keyframes logoGlow {
+  0% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+  50% { box-shadow: 0 6px 25px rgba(52, 152, 219, 0.3); }
+  100% { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+}
+
+.logo-container {
+  animation: logoGlow 3s ease-in-out infinite;
+}
+
+/* Brand text enhancements */
+.brand-text h6 {
+  background: linear-gradient(45deg, #ffffff, #3498db);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-feature-settings: 'liga' on, 'calt' on;
+}
+
+/* Menu item enhancements */
+.pc-navbar .pc-item {
+  margin-bottom: 3px;
+}
+
+.pc-navbar .pc-link {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px !important;
+  margin: 2px 5px;
+  padding: 12px 15px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pc-navbar .pc-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.5s;
+}
+
+.pc-navbar .pc-link:hover::before {
+  left: 100%;
+}
+
+/* Icon styling */
+.pc-micon i {
+  transition: all 0.3s ease;
+}
+
+.pc-navbar .pc-link:hover .pc-micon i {
+  transform: scale(1.1);
+  color: #3498db !important;
+}
+
+/* Active state */
+.pc-navbar .pc-link.active {
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.2), rgba(41, 128, 185, 0.3)) !important;
+  border-left: 4px solid #3498db;
+  box-shadow: inset 0 0 0 1px rgba(52, 152, 219, 0.3);
+}
+
+/* Submenu enhancements */
+.pc-submenu {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin: 5px;
+  padding: 5px 0;
+}
+
+.pc-submenu .pc-link {
+  border-radius: 6px !important;
+  margin: 1px 8px;
+  padding: 8px 15px 8px 45px !important;
+}
+
+/* Caption improvements */
+.pc-caption {
+  position: relative;
+}
+
+.pc-caption::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 15px;
+  right: 15px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+}
+
+/* Smooth scrolling */
+.navbar-content {
+  scroll-behavior: smooth;
+}
+
+/* Loading animation for menu items */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.pc-navbar .pc-item {
+  animation: slideInLeft 0.5s ease-out;
+  animation-fill-mode: both;
+}
+
+/* Stagger animation for menu items */
+.pc-navbar .pc-item:nth-child(1) { animation-delay: 0.1s; }
+.pc-navbar .pc-item:nth-child(2) { animation-delay: 0.2s; }
+.pc-navbar .pc-item:nth-child(3) { animation-delay: 0.3s; }
+.pc-navbar .pc-item:nth-child(4) { animation-delay: 0.4s; }
+.pc-navbar .pc-item:nth-child(5) { animation-delay: 0.5s; }
+.pc-navbar .pc-item:nth-child(6) { animation-delay: 0.6s; }
+.pc-navbar .pc-item:nth-child(7) { animation-delay: 0.7s; }
+.pc-navbar .pc-item:nth-child(8) { animation-delay: 0.8s; }
+
+/* Responsive enhancements */
+@media (max-width: 1200px) {
+  .pc-sidebar {
+    width: 260px;
+  }
+}
+
+@media (max-width: 992px) {
+  .pc-sidebar {
+    width: 280px;
+    position: fixed;
+    z-index: 1050;
+    transform: translateX(-100%);
+  }
+  
+  .pc-sidebar.active {
+    transform: translateX(0);
+  }
+  
+  /* Overlay for mobile */
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+}

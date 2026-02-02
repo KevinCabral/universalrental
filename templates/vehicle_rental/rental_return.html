@@ -1,0 +1,270 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Registar Devolução{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Registar Devolução do Aluguer</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_list' %}">Alugueres</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_detail' rental.pk %}">Aluguer #{{ rental.id }}</a></li>
+          <li class="breadcrumb-item active">Registar Devolução</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Rental Summary -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>Resumo do Aluguer #{{ rental.id|stringformat:"05d" }}</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3">
+                <strong>Cliente:</strong> {{ rental.customer.first_name }} {{ rental.customer.last_name }}
+              </div>
+              <div class="col-md-3">
+                <strong>Data de Fim Prevista:</strong> {{ rental.end_date|date:"M d, Y" }}
+              </div>
+              <div class="col-md-3">
+                <strong>Quilometragem Inicial:</strong> {{ rental.mileage_start|default:"-" }} km
+              </div>
+              <div class="col-md-3">
+                <strong>Combustível Inicial:</strong> {{ rental.get_fuel_level_start_display }}
+              </div>
+              <div class="col-md-6">
+                <strong>Veículo:</strong> {{ rental.vehicle.brand.name }} {{ rental.vehicle.model }} ({{ rental.vehicle.year }})
+              </div>
+              <div class="col-md-6">
+                <strong>Matrícula:</strong> {{ rental.vehicle.registration_number }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Return Form -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>Detalhes da Devolução do Veículo</h5>
+          </div>
+          <div class="card-body">
+            
+            <!-- Display Messages -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+            
+            <form method="post" id="returnForm">
+              {% csrf_token %}
+              
+              <div class="row">
+                <!-- Return Date -->
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="actual_return_date" class="form-label">Data e Hora Real de Devolução</label>
+                    <input type="datetime-local" 
+                           id="actual_return_date" 
+                           name="actual_return_date" 
+                           class="form-control"
+                           min="{{ rental.start_date|date:'Y-m-d\TH:i' }}"
+                           value="{% if form_data.actual_return_date %}{{ form_data.actual_return_date }}{% else %}{% now 'Y-m-d\TH:i' %}{% endif %}">>>
+                    <small class="form-text text-muted">Mínimo: {{ rental.start_date|date:"d/m/Y H:i" }} (início do aluguer)</small>
+                  </div>
+                </div>
+                
+                <!-- Mileage End -->
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="mileage_end" class="form-label">Quilometragem Final</label>
+                    <input type="number" 
+                           id="mileage_end" 
+                           name="mileage_end" 
+                           class="form-control"
+                           placeholder="Quilómetros no final"
+                           min="{{ rental.mileage_start }}"
+                           step="0.1"
+                           value="{% if form_data.mileage_end %}{{ form_data.mileage_end }}{% endif %}">
+                    <small class="form-text text-muted">Mínimo: {{ rental.mileage_start }} km</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <!-- Fuel Level Return -->
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="fuel_level_end" class="form-label">Nível de Combustível na Devolução</label>
+                    <select id="fuel_level_end" name="fuel_level_end" class="form-control">
+                      <option value="">Selecionar nível...</option>
+                      <option value="empty" {% if form_data.fuel_level_end == 'empty' %}selected{% endif %}>Vazio (0%)</option>
+                      <option value="quarter" {% if form_data.fuel_level_end == 'quarter' %}selected{% endif %}>Um Quarto (25%)</option>
+                      <option value="half" {% if form_data.fuel_level_end == 'half' %}selected{% endif %}>Meio (50%)</option>
+                      <option value="three_quarter" {% if form_data.fuel_level_end == 'three_quarter' %}selected{% endif %}>Três Quartos (75%)</option>
+                      <option value="full" {% if form_data.fuel_level_end == 'full' %}selected{% endif %}>Cheio (100%)</option>
+                    </select>
+                    <small class="form-text text-muted">Combustível inicial: {{ rental.get_fuel_level_start_display }}</small>
+                  </div>
+                </div>
+                
+                <!-- Condition -->
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="condition_return" class="form-label">Condição na Devolução</label>
+                    <select id="condition_return" name="condition_return" class="form-control">
+                      <option value="">Selecionar condição...</option>
+                      <option value="excellent" {% if form_data.condition_return == 'excellent' %}selected{% elif not form_data %}{% endif %}>Excelente</option>
+                      <option value="good" {% if form_data.condition_return == 'good' %}selected{% elif not form_data %}selected{% endif %}>Boa</option>
+                      <option value="fair" {% if form_data.condition_return == 'fair' %}selected{% endif %}>Razoável</option>
+                      <option value="poor" {% if form_data.condition_return == 'poor' %}selected{% endif %}>Má</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <!-- Late Return Fee -->
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="late_return_fee" class="form-label">Taxa de Atraso</label>
+                    <input type="number" 
+                           id="late_return_fee" 
+                           name="late_return_fee" 
+                           class="form-control"
+                           value="{{ form_data.late_return_fee|default_if_none:'' }}"
+                           min="0"
+                           step="0.01"
+                           placeholder="Deixe em branco para cálculo automático">
+                    <small class="form-text text-muted">
+                      <strong>Deixe em branco:</strong> Auto-calculado se atrasado<br>
+                      <strong>Digite 0:</strong> Sem taxa de atraso<br>
+                      <strong>Digite valor:</strong> Taxa personalizada
+                    </small>
+                  </div>
+                </div>
+                
+                <!-- Damage Fee -->
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="damage_fee" class="form-label">Taxa de Danos</label>
+                    <input type="number" 
+                           id="damage_fee" 
+                           name="damage_fee" 
+                           class="form-control"
+                           value="{% if form_data.damage_fee %}{{ form_data.damage_fee }}{% else %}0{% endif %}"
+                           min="0"
+                           step="0.01">
+                    <small class="form-text text-muted">Apenas se houver danos no veículo</small>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Return Notes -->
+              <div class="row">
+                <div class="col-12">
+                  <div class="mb-3">
+                    <label for="return_notes" class="form-label">Notas da Devolução</label>
+                    <textarea id="return_notes" 
+                              name="return_notes" 
+                              class="form-control" 
+                              rows="4"
+                              placeholder="Qualquer observação sobre a devolução, condição do veículo, etc.">{% if form_data.return_notes %}{{ form_data.return_notes }}{% endif %}</textarea>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-12">
+                  <button type="submit" class="btn btn-success me-2">
+                    <i data-feather="check"></i> Confirmar Devolução
+                  </button>
+                  <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}" class="btn btn-secondary">
+                    <i data-feather="arrow-left"></i> Cancelar
+                  </a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    feather.replace();
+    
+    // Auto-calculate late fee if return date is after expected date
+    const returnDateInput = document.getElementById('actual_return_date');
+    const lateFeeInput = document.getElementById('late_return_fee');
+    const expectedReturnDate = new Date('{{ rental.end_date|date:"c" }}');
+    const startDate = new Date('{{ rental.start_date|date:"c" }}');
+    
+    function validateAndCalculate() {
+        const returnDate = new Date(returnDateInput.value);
+        
+        // Validate return date is not before start date
+        if (returnDate < startDate) {
+            returnDateInput.setCustomValidity('A data de devolução não pode ser anterior à data de início do aluguer.');
+            return;
+        } else {
+            returnDateInput.setCustomValidity(''); // Clear any previous validation message
+        }
+        
+        // Calculate late fee if overdue
+        if (returnDate > expectedReturnDate) {
+            const daysLate = Math.ceil((returnDate - expectedReturnDate) / (1000 * 60 * 60 * 24));
+            const dailyRate = parseFloat('{{ rental.daily_rate }}') || 0;
+            const suggestedFee = daysLate * dailyRate * 0.1; // 10% of daily rate per day
+            if (lateFeeInput.value == '0' || lateFeeInput.value == '') {
+                lateFeeInput.value = suggestedFee.toFixed(2);
+            }
+        } else {
+            if (lateFeeInput.value != '0') {
+                // Only clear if user hasn't manually entered a value
+                lateFeeInput.value = '0';
+            }
+        }
+    }
+    
+    returnDateInput.addEventListener('change', validateAndCalculate);
+    returnDateInput.addEventListener('input', validateAndCalculate);
+    
+    // Initial validation and calculation
+    validateAndCalculate();
+    
+    // Form submission handling
+    $('#returnForm').on('submit', function() {
+        // Disable submit button to prevent double submission
+        $(this).find('button[type="submit"]').prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> A processar...'
+        );
+    });
+});
+</script>
+{% endblock extra_js %}

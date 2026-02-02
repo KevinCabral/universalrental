@@ -1,0 +1,478 @@
+{% load i18n static admin_datta %}
+
+<nav class="pc-sidebar" style="background: linear-gradient(135deg, #34495e 0%, #3d566e 35%, #455a75 65%, #34495e 100%); box-shadow: 2px 0 12px rgba(0,0,0,0.15);">
+  <div class="navbar-wrapper">
+    <!-- Fixed Logo Section with Proper Constraints -->
+    <div class="m-header" style="padding: 30px 20px 35px 20px; position: relative; min-height: 140px;">
+      <a href="{% url "index" %}" class="b-brand d-flex flex-column align-items-center text-decoration-none">
+        <!-- Logo Container with Square Format -->
+        <div class="logo-container d-flex justify-content-center align-items-center" 
+             style="width: 75px; height: 75px; background: rgba(255,255,255,0.98); 
+                    border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); 
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+                    padding: 8px; margin: 10px auto 25px auto; overflow: visible;
+                    display: flex; justify-content: center; align-items: center;
+                    position: relative; left: 12px; right: 0;">
+          <img src="{% static 'img/driveon.png' %}" 
+               class="img-fluid" 
+               alt="DriveOn Car Rental" 
+               style="max-width: 60px; max-height: 60px; width: auto; height: auto; 
+                      object-fit: contain; object-position: center; display: block;
+                      filter: brightness(1.1) contrast(1.1);">
+        </div>
+        
+        <!-- Compact Brand Text -->
+        <div class="brand-text text-center" style="width: 100%; max-width: 200px;">
+          <p class="mb-0" style="color: rgba(255,255,255,0.65); font-family: 'Inter', sans-serif; 
+                               font-weight: 300; font-size: 9px; letter-spacing: 1.5px; 
+                               text-transform: uppercase; line-height: 1.3; margin-bottom: 0;">
+            Gestão de Aluguer de Carros
+          </p>
+        </div>
+      </a>
+      
+      <!-- Enhanced Bottom Separator -->
+      <div style="position: absolute; bottom: 0; left: 20px; right: 20px; height: 2px; 
+                  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+                  box-shadow: 0 1px 4px rgba(0,0,0,0.3); border-radius: 1px;"></div>
+    </div>
+    <div class="navbar-content" style="padding: 0 15px; margin-top: 20px;">
+
+      <ul class="pc-navbar">
+      {% if request.user.is_authenticated %}
+      {% if request.user.is_superuser %}  
+
+      <!-- Visual Section Divider for Admin -->
+      <li class="pc-item" style="margin-bottom: 15px;">
+        <div style="display: flex; align-items: center; margin: 10px 0;">
+          <div style="flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);"></div>
+          <span style="color: rgba(255,255,255,0.6); font-size: 10px; font-weight: 600; 
+                       letter-spacing: 1px; text-transform: uppercase; padding: 0 15px;">Administração</span>
+          <div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.2), transparent);"></div>
+        </div>
+      </li>
+      
+      <li class="pc-item">
+        <a href="{% url "admin:index" %}" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
+          <span class="pc-micon">
+            <i data-feather="settings" style="color: rgba(255,255,255,0.8);"></i>
+          </span>
+          <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Interface Superusuário</span>
+        </a>
+      </li>
+      
+      <!-- superuser guard -->  
+      {% endif %}
+
+        <!-- Visual Section Divider for Apps -->
+        <li class="pc-item" style="margin-bottom: 10px; margin-top: 20px;">
+          <div style="display: flex; align-items: center; margin: 15px 0 10px 0;">
+            <div style="flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);"></div>
+            <div style="width: 6px; height: 6px; background: rgba(255,255,255,0.4); 
+                        border-radius: 50%; margin: 0 15px;"></div>
+            <div style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.25), transparent);"></div>
+          </div>
+        </li>
+        <li class="pc-item">
+          <a href="{% url "index" %}" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
+            <span class="pc-micon">
+              <i data-feather="home" style="color: rgba(255,255,255,0.8);"></i>
+            </span>
+            <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Painel de Controle</span>
+          </a>
+        </li>
+        
+        <!-- Vehicle Rental Management -->
+        <li class="pc-item pc-hasmenu">
+          <a href="#!" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
+            <span class="pc-micon">
+              <i data-feather="truck" style="color: rgba(255,255,255,0.8);"></i>
+            </span>
+            <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Aluguer de Veículos</span>
+            <span class="pc-arrow"><i class="ti ti-chevron-right" style="color: rgba(255,255,255,0.6);"></i></span>
+          </a>
+          <ul class="pc-submenu">
+            <li class="pc-item">
+              <a class="pc-link" href="{% url 'vehicle_rental:vehicle_list' %}">
+                <span class="pc-micon"><i data-feather="truck"></i></span>
+                <span class="pc-mtext">Veículos</span>
+              </a>
+            </li>
+            <li class="pc-item">
+              <a class="pc-link" href="{% url 'vehicle_rental:customer_list' %}">
+                <span class="pc-micon"><i data-feather="users"></i></span>
+                <span class="pc-mtext">Clientes</span>
+              </a>
+            </li>
+            <li class="pc-item">
+              <a class="pc-link" href="{% url 'vehicle_rental:rental_list' %}">
+                <span class="pc-micon"><i data-feather="calendar"></i></span>
+                <span class="pc-mtext">Alugueres</span>
+              </a>
+            </li>
+            <li class="pc-item">
+              <a class="pc-link" href="{% url 'vehicle_rental:rental_create' %}">
+                <span class="pc-micon"><i data-feather="plus-circle"></i></span>
+                <span class="pc-mtext">Novo Aluguer</span>
+              </a>
+            </li>
+            <li class="pc-item">
+              <a class="pc-link" href="{% url 'vehicle_rental:expense_list' %}">
+                <span class="pc-micon"><i data-feather="dollar-sign"></i></span>
+                <span class="pc-mtext">Despesas</span>
+              </a>
+            </li>
+            <li class="pc-item">
+              <a class="pc-link" href="{% url 'vehicle_rental:maintenance_list' %}">
+                <span class="pc-micon"><i data-feather="tool"></i></span>
+                <span class="pc-mtext">Manutenção</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        
+        <!-- Profile and Logout for authenticated users -->
+        <li class="pc-item">
+          <a href="{% url "profile" %}" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
+            <span class="pc-micon"><i data-feather="user" style="color: rgba(255,255,255,0.8);"></i></span>
+            <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Perfil</span>
+          </a>
+        </li>
+        <li class="pc-item">
+          <a href="{% url "logout" %}" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
+            <span class="pc-micon">
+              <svg class="pc-icon me-2">
+                <use xlink:href="#custom-logout-1-outline"></use>
+              </svg>
+            </span>
+            <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Sair</span>
+          </a>
+        </li>
+        
+        {% else %}
+        <!-- Login option for non-authenticated users -->
+        <li class="pc-item" style="margin-top: 20px;">
+          <div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.7);">
+            <i data-feather="lock" style="margin-bottom: 10px; color: rgba(255,255,255,0.6);"></i>
+            <p style="font-size: 14px; margin-bottom: 15px;">Faça login para acessar<br>o sistema</p>
+            <a href="{% url "login" %}" class="btn btn-primary btn-sm" 
+               style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); 
+                      color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none;">
+              <i data-feather="log-in" style="width: 16px; height: 16px; margin-right: 5px;"></i>
+              Entrar
+            </a>
+          </div>
+        </li>
+        {% endif %}
+
+      </ul>
+      
+      <div class="card pc-user-card my-3" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;">
+        <div class="card-body text-center">
+          <a href="https://driveon-car-rental.com" class="btn" 
+             style="background: linear-gradient(45deg, #3498db, #2980b9); color: white; border: none; 
+                    border-radius: 8px; padding: 8px 16px; font-weight: 600; text-decoration: none;
+                    transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);">
+            <span class="pc-micon"><i data-feather="external-link"></i></span>
+            Visit Website
+          </a>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</nav>
+
+<!-- Custom CSS for Enhanced Sidebar -->
+<style>
+/* Enhanced logo hover effect with proper constraints */
+.logo-container:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35) !important;
+}
+
+/* Logo visibility fixes for all screen sizes - Square Format */
+.logo-container {
+  min-width: 75px !important;
+  min-height: 75px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  position: relative !important;
+  transform: translateX(12px) !important;
+}
+
+.logo-container img {
+  display: block !important;
+  margin: 0 auto !important;
+  transform: scale(1.0) !important;
+}
+
+/* Enhanced mobile responsive behavior with logo constraints */
+@media (max-width: 768px) {
+  .pc-sidebar {
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1050;
+  }
+  
+  .pc-sidebar.active {
+    transform: translateX(0);
+  }
+  
+  .m-header {
+    padding: 25px 15px 30px 15px !important;
+    min-height: 120px !important;
+  }
+  
+  .logo-container {
+    width: 65px !important;
+    height: 65px !important;
+    min-width: 65px !important;
+    min-height: 65px !important;
+    padding: 6px !important;
+    margin: 8px auto 20px auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: translateX(10px) !important;
+  }
+  
+  .logo-container img {
+    max-width: 52px !important;
+    max-height: 52px !important;
+    transform: scale(1.05) !important;
+  }
+  
+  .brand-text h5 {
+    font-size: 14px !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .brand-text p {
+    font-size: 8px !important;
+    letter-spacing: 1px !important;
+  }
+  
+  .navbar-content {
+    padding: 0 12px !important;
+    margin-top: 15px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .pc-sidebar {
+    width: 260px;
+  }
+  
+  .m-header {
+    padding: 20px 12px 25px 12px !important;
+    min-height: 110px !important;
+  }
+  
+  .logo-container {
+    width: 55px !important;
+    height: 55px !important;
+    min-width: 55px !important;
+    min-height: 55px !important;
+    padding: 5px !important;
+    margin: 6px auto 15px auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: translateX(8px) !important;
+  }
+  
+  .logo-container img {
+    max-width: 45px !important;
+    max-height: 45px !important;
+    transform: scale(1.1) !important;
+  }
+  
+  .brand-text h5 {
+    font-size: 12px !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 3px !important;
+  }
+  
+  .brand-text p {
+    font-size: 7px !important;
+    letter-spacing: 0.5px !important;
+  }
+  
+  .navbar-content {
+    padding: 0 10px !important;
+    margin-top: 12px !important;
+  }
+}
+
+/* Ensure logo is always visible - Square Format */
+@media (max-width: 320px) {
+  .logo-container {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    margin: 5px auto 12px auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    transform: translateX(6px) !important;
+  }
+  
+  .logo-container img {
+    max-width: 38px !important;
+    max-height: 38px !important;
+    transform: scale(1.15) !important;
+  }
+}
+
+/* Mobile overlay */
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Enhanced menu item styling */
+.pc-navbar .pc-link:hover {
+  background: rgba(255,255,255,0.1) !important;
+  transform: translateX(5px);
+  border-left: 3px solid #3498db;
+}
+
+.pc-navbar .pc-link.active {
+  background: rgba(52, 152, 219, 0.2) !important;
+  border-left: 3px solid #3498db;
+}
+
+/* Submenu styling */
+.pc-submenu .pc-link {
+  padding-left: 45px !important;
+  color: rgba(255,255,255,0.8) !important;
+  font-size: 14px !important;
+}
+
+.pc-submenu .pc-link:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: #3498db !important;
+}
+
+/* Caption styling */
+.pc-caption label {
+  margin-top: 20px !important;
+  margin-bottom: 10px !important;
+  padding: 5px 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+/* Scroll behavior */
+.navbar-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+
+.navbar-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.navbar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.navbar-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
+}
+
+.navbar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.5);
+}
+</style>
+
+<!-- Enhanced Responsive JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Mobile sidebar toggle with overlay
+  const sidebarToggle = document.getElementById('mobile-collapse');
+  const sidebar = document.querySelector('.pc-sidebar');
+  let overlay;
+  
+  // Create overlay for mobile
+  function createOverlay() {
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'sidebar-overlay';
+      document.body.appendChild(overlay);
+      
+      overlay.addEventListener('click', function() {
+        closeSidebar();
+      });
+    }
+  }
+  
+  function openSidebar() {
+    if (window.innerWidth <= 768) {
+      createOverlay();
+      sidebar.classList.add('active');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+  
+  function closeSidebar() {
+    sidebar.classList.remove('active');
+    if (overlay) {
+      overlay.classList.remove('active');
+    }
+    document.body.style.overflow = '';
+  }
+  
+  if (sidebarToggle && sidebar) {
+    sidebarToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (sidebar.classList.contains('active')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+  }
+  
+  // Close sidebar on outside click (mobile)
+  document.addEventListener('click', function(e) {
+    if (window.innerWidth <= 768) {
+      if (sidebar.classList.contains('active') && 
+          !sidebar.contains(e.target) && 
+          sidebarToggle && !sidebarToggle.contains(e.target)) {
+        closeSidebar();
+      }
+    }
+  });
+  
+  // Handle window resize
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+      closeSidebar();
+    }
+  });
+  
+  // Smooth scroll for sidebar content
+  const navbarContent = document.querySelector('.navbar-content');
+  if (navbarContent) {
+    navbarContent.style.scrollBehavior = 'smooth';
+  }
+});
+</script>

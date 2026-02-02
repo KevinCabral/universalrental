@@ -1,0 +1,346 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %} Lista de Alugueres {% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+  <div class="col-md-12">
+    <div class="page-header-title">
+      <h5 class="m-b-10">Gestão de Alugueres</h5>
+    </div>
+    <ul class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+      <li class="breadcrumb-item active">Alugueres</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header">
+        <h5>Filtrar Alugueres</h5>
+        <div class="card-header-right">
+          <a href="{% url 'vehicle_rental:rental_create' %}" class="btn btn-success btn-sm">
+            <i data-feather="plus"></i> Novo Aluguer
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="get" class="row">
+          <div class="col-md-2">
+            <label for="status">Estado</label>
+            <select name="status" id="status" class="form-control">
+              <option value="">Todos os Estados</option>
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="date_from">Data de Início</label>
+            <input type="date" name="date_from" id="date_from" class="form-control" 
+                   value="{{ current_filters.date_from }}">
+          </div>
+          <div class="col-md-2">
+            <label for="date_to">Data de Fim</label>
+            <input type="date" name="date_to" id="date_to" class="form-control" 
+                   value="{{ current_filters.date_to }}">
+          </div>
+          <div class="col-md-4">
+            <label for="search">Pesquisar</label>
+            <input type="text" name="search" id="search" class="form-control" 
+                   placeholder="Nome do cliente, matrícula do veículo..." 
+                   value="{{ current_filters.search }}">
+          </div>
+          <div class="col-md-2">
+            <label>&nbsp;</label>
+            <div>
+              <button type="submit" class="btn btn-primary">
+                <i data-feather="search"></i> Filtrar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rental List -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header">
+        <h5>Alugueres ({{ page_obj.paginator.count }} total)</h5>
+      </div>
+      <div class="card-body">
+        {% if page_obj %}
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Aluguer #</th>
+                  <th>Cliente</th>
+                  <th>Veículo</th>
+                  <th>Datas</th>
+                  <th>Estado</th>
+                  <th>Valor Total</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rental in page_obj %}
+                <tr>
+                  <td>
+                    <strong>#{{ rental.id|stringformat:"05d" }}</strong>
+                    <br>
+                    <small class="text-muted">{{ rental.created_at|date:"M d, Y" }}</small>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.customer.first_name }} {{ rental.customer.last_name }}</strong>
+                      <br>
+                      <small class="text-muted">{{ rental.customer.phone_number }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.vehicle.registration_number }}</strong>
+                      <br>
+                      <small class="text-muted">{{ rental.vehicle.brand.name }} {{ rental.vehicle.model }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.start_date|date:"M d" }} - {{ rental.end_date|date:"M d, Y" }}</strong>
+                      <br>
+                      <small class="text-muted">{{ rental.get_rental_duration }} dias</small>
+                      <br>
+                      {% if rental.actual_return_date %}
+                        <small class="{% if rental.is_overdue %}text-danger{% else %}text-success{% endif %}">
+                          Devolvido: {{ rental.actual_return_date|date:"M d, Y" }}
+                        </small>
+                      {% else %}
+                        {% if rental.status == 'completed' %}
+                          <small class="text-success">Devolvido: {{ rental.end_date|date:"M d, Y" }}</small>
+                        {% elif rental.status == 'active' %}
+                          <small class="text-warning">Não Devolvido</small>
+                        {% elif rental.status == 'cancelled' %}
+                          <small class="text-muted">Cancelado</small>
+                        {% else %}
+                          <small class="text-info">{{ rental.get_status_display }}</small>
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-{% if rental.status == 'active' %}warning{% elif rental.status == 'completed' %}success{% elif rental.status == 'cancelled' %}danger{% else %}secondary{% endif %} text-{% if rental.status == 'active' %}dark{% else %}white{% endif %}">
+                      {{ rental.get_status_display }}
+                    </span>
+                    {% if rental.is_overdue %}
+                      <br><span class="badge bg-danger text-white mt-1">Em Atraso</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.total_amount|floatformat:0 }} ECV</strong>
+                      {% if rental.commission_amount %}
+                        <br><small class="text-muted">Comissão: {{ rental.commission_amount|floatformat:0 }} ECV</small>
+                      {% endif %}
+                      {% if rental.late_return_fee %}
+                        <br><small class="text-warning">Taxa de Atraso: {{ rental.late_return_fee|floatformat:0 }} ECV</small>
+                      {% endif %}
+                      {% if rental.damage_fee %}
+                        <br><small class="text-danger">Taxa de Danos: {{ rental.damage_fee|floatformat:0 }} ECV</small>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}" 
+                         class="btn btn-sm btn-outline-primary">
+                        <i data-feather="eye"></i>
+                      </a>
+                      {% if rental.status == 'pending' %}
+                      <a href="{% url 'vehicle_rental:rental_confirm' rental.pk %}" 
+                         class="btn btn-sm btn-outline-success" title="Confirmar Aluguer">
+                        <i data-feather="check-circle"></i>
+                      </a>
+                      <a href="{% url 'vehicle_rental:rental_cancel' rental.pk %}" 
+                         class="btn btn-sm btn-outline-danger" title="Cancelar Aluguer">
+                        <i data-feather="x-circle"></i>
+                      </a>
+                      {% elif rental.status == 'confirmed' or rental.status == 'active' %}
+                      <a href="{% url 'vehicle_rental:rental_return' rental.pk %}" 
+                         class="btn btn-sm btn-outline-warning" title="Registar Devolução">
+                        <i data-feather="corner-down-left"></i>
+                      </a>
+                      {% elif rental.status == 'completed' %}
+                      <a href="{% url 'vehicle_rental:rental_invoice' rental.pk %}" 
+                         class="btn btn-sm btn-outline-info" title="Gerar Fatura">
+                        <i data-feather="file-text"></i>
+                      </a>
+                      {% endif %}
+                      <a href="{% url 'vehicle_rental:rental_edit' rental.pk %}" 
+                         class="btn btn-sm btn-outline-secondary">
+                        <i data-feather="edit"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          {% if page_obj.has_other_pages %}
+          <nav aria-label="Paginação de alugueres">
+            <ul class="pagination justify-content-center">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                    Anterior
+                  </a>
+                </li>
+              {% endif %}
+
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                    Próxima
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+
+        {% else %}
+          <div class="text-center py-5">
+            <i data-feather="calendar" class="text-muted" style="width: 64px; height: 64px;"></i>
+            <h5 class="mt-3 text-muted">Nenhum aluguer encontrado</h5>
+            <p class="text-muted">Tente ajustar os filtros ou criar um novo aluguer.</p>
+            <a href="{% url 'vehicle_rental:rental_create' %}" class="btn btn-success">
+              <i data-feather="plus"></i> Criar Primeiro Aluguer
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Return Vehicle Modal -->
+<div class="modal fade" id="returnModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Devolver Veículo</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form id="returnForm" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="actual_return_date">Data de Devolução</label>
+            <input type="datetime-local" name="actual_return_date" id="actual_return_date" 
+                   class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="return_mileage">Quilometragem de Devolução</label>
+            <input type="number" name="return_mileage" id="return_mileage" 
+                   class="form-control" step="0.1">
+          </div>
+          <div class="form-group">
+            <label for="fuel_level_return">Nível de Combustível na Devolução (%)</label>
+            <input type="number" name="fuel_level_return" id="fuel_level_return" 
+                   class="form-control" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label for="damage_fee">Taxa de Danos ($)</label>
+            <input type="number" name="damage_fee" id="damage_fee" 
+                   class="form-control" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label for="notes">Notas</label>
+            <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Devolver Veículo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize feather icons
+    feather.replace();
+    
+    // Auto-submit form on select change
+    $('#status').change(function() {
+        $(this).closest('form').submit();
+    });
+});
+
+function returnVehicle(rentalId) {
+    $('#returnForm').attr('action', '/vehicle-rental/api/rentals/' + rentalId + '/return/');
+    
+    // Set default return date to now
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const localTime = new Date(now.getTime() - tzOffset);
+    $('#actual_return_date').val(localTime.toISOString().slice(0, 16));
+    
+    $('#returnModal').modal('show');
+}
+
+$('#returnForm').submit(function(e) {
+    e.preventDefault();
+    
+    $.ajax({
+        url: $(this).attr('action'),
+        method: 'POST',
+        data: $(this).serialize(),
+        success: function(response) {
+            $('#returnModal').modal('hide');
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('Erro ao devolver veículo: ' + xhr.responseText);
+        }
+    });
+});
+</script>
+{% endblock extra_js %}

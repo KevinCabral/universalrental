@@ -1,0 +1,189 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Perfil do Utilizador | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Perfil do Utilizador</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item active">Perfil</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="row">
+      <div class="col-xl-4 col-md-6">
+        <div class="card profile-card shadow-sm">
+          <div class="card-body text-center">
+            <div class="profile-avatar mb-4">
+              <div class="avatar-container d-inline-flex align-items-center justify-content-center mb-3"
+                   style="width: 120px; height: 120px; background: linear-gradient(135deg, #3498db, #2980b9); 
+                          border-radius: 50%; box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);">
+                <i class="fas fa-user text-white" style="font-size: 3rem;"></i>
+              </div>
+            </div>
+            <h4 class="mb-2 text-primary fw-bold">
+              {% if user.first_name or user.last_name %}
+                {{ user.first_name }} {{ user.last_name }}
+              {% else %}
+                {{ user.username }}
+              {% endif %}
+            </h4>
+            <p class="text-muted mb-3">@{{ user.username }}</p>
+            <div class="row text-center">
+              <div class="col-6">
+                <div class="bg-light rounded p-3">
+                  <h6 class="mb-1 fw-bold text-primary">Membro desde</h6>
+                  <small class="text-muted">{{ user.date_joined|date:"M Y" }}</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="bg-light rounded p-3">
+                  <h6 class="mb-1 fw-bold text-primary">Último Acesso</h6>
+                  <small class="text-muted">{{ user.last_login|date:"d/m/Y" }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Information -->
+      <div class="col-xl-8 col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light border-bottom">
+            <h5 class="mb-0 text-primary fw-bold">
+              <i class="fas fa-user-cog me-2"></i>
+              Informações do Perfil
+            </h5>
+            <div class="card-header-right">
+              <a href="{% url 'profile_edit' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-edit me-1"></i> Editar Perfil
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">NOME DE UTILIZADOR</label>
+                <div class="bg-light rounded p-3">
+                  <span class="text-dark">{{ user.username }}</span>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">EMAIL</label>
+                <div class="bg-light rounded p-3">
+                  <span class="text-dark">{{ user.email|default:"Não definido" }}</span>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">PRIMEIRO NOME</label>
+                <div class="bg-light rounded p-3">
+                  <span class="text-dark">{{ user.first_name|default:"Não definido" }}</span>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">ÚLTIMO NOME</label>
+                <div class="bg-light rounded p-3">
+                  <span class="text-dark">{{ user.last_name|default:"Não definido" }}</span>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">ESTADO DA CONTA</label>
+                <div class="bg-light rounded p-3">
+                  {% if user.is_active %}
+                    <span class="badge bg-success">Ativa</span>
+                  {% else %}
+                    <span class="badge bg-danger">Inativa</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted small">TIPO DE UTILIZADOR</label>
+                <div class="bg-light rounded p-3">
+                  {% if user.is_superuser %}
+                    <span class="badge bg-danger">Superusuário</span>
+                  {% elif user.is_staff %}
+                    <span class="badge bg-warning">Staff</span>
+                  {% else %}
+                    <span class="badge bg-primary">Utilizador</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Actions -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-header bg-light border-bottom">
+            <h5 class="mb-0 text-primary fw-bold">
+              <i class="fas fa-cog me-2"></i>
+              Ações da Conta
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <div class="d-grid">
+                  <a href="{% url 'profile_edit' %}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-user-edit me-2"></i>
+                    Editar Perfil
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="d-grid">
+                  <a href="{% url 'change_password' %}" class="btn btn-outline-warning btn-lg">
+                    <i class="fas fa-key me-2"></i>
+                    Alterar Senha
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+  .profile-card {
+    border-radius: 15px;
+    border: none;
+  }
+  
+  .avatar-container {
+    transition: all 0.3s ease;
+  }
+  
+  .avatar-container:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 35px rgba(52, 152, 219, 0.4) !important;
+  }
+  
+  .card {
+    border-radius: 12px;
+  }
+  
+  .bg-light {
+    background-color: #f8f9fa !important;
+  }
+</style>
+{% endblock extra_css %}

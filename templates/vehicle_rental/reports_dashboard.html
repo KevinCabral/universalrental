@@ -1,0 +1,577 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Painel de Relatórios | Sistema de Aluguer{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Relatórios e Análises</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item active">Relatórios</li>
+        </ul>
+      </div>
+    </div>
+
+<!-- Date Range Filter -->
+<div class="row mb-4">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-filter me-2"></i>Filtros de Relatório
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <div class="col-md-3">
+            <label for="date_from" class="form-label fw-bold">
+              <i class="fas fa-calendar-alt me-1 text-muted"></i>Data Inicial
+            </label>
+            <input type="date" name="date_from" id="date_from" class="form-control" 
+                   value="{{ filters.date_from }}">
+          </div>
+          <div class="col-md-3">
+            <label for="date_to" class="form-label fw-bold">
+              <i class="fas fa-calendar-check me-1 text-muted"></i>Data Final
+            </label>
+            <input type="date" name="date_to" id="date_to" class="form-control" 
+                   value="{{ filters.date_to }}">
+          </div>
+          <div class="col-md-3">
+            <label for="period" class="form-label fw-bold">
+              <i class="fas fa-clock me-1 text-muted"></i>Seleção Rápida
+            </label>
+            <select name="period" id="period" class="form-select">
+              <option value="">Período Personalizado</option>
+              <option value="today" {% if filters.period == 'today' %}selected{% endif %}>Hoje</option>
+              <option value="week" {% if filters.period == 'week' %}selected{% endif %}>Esta Semana</option>
+              <option value="month" {% if filters.period == 'month' %}selected{% endif %}>Este Mês</option>
+              <option value="quarter" {% if filters.period == 'quarter' %}selected{% endif %}>Este Trimestre</option>
+              <option value="year" {% if filters.period == 'year' %}selected{% endif %}>Este Ano</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">&nbsp;</label>
+            <div>
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-sync-alt me-2"></i>Atualizar Relatórios
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Financial Summary Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card bg-success text-white shadow-sm">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1">Receita Total</h6>
+            <h3 class="mb-0">€{{ financial_summary.total_revenue|floatformat:2 }}</h3>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-euro-sign" style="font-size: 2rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-info text-white shadow-sm">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1">Comissões Ganhas</h6>
+            <h3 class="mb-0">€{{ financial_summary.total_commission|floatformat:2 }}</h3>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-percentage" style="font-size: 2rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-warning text-white shadow-sm">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1">Despesas Totais</h6>
+            <h3 class="mb-0">€{{ financial_summary.total_expenses|floatformat:2 }}</h3>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-credit-card" style="font-size: 2rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-primary text-white shadow-sm">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1">Lucro Líquido</h6>
+            <h3 class="mb-0">€{{ financial_summary.net_profit|floatformat:2 }}</h3>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-chart-line" style="font-size: 2rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rental Statistics -->
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-bar me-2"></i>Estatísticas de Aluguer
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-md-6 mb-3">
+            <div class="p-3 bg-light rounded">
+              <h4 class="text-primary mb-1">
+                <i class="fas fa-car me-2"></i>{{ rental_stats.total_rentals }}
+              </h4>
+              <p class="mb-0 text-muted">Total de Alugueres</p>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="p-3 bg-light rounded">
+              <h4 class="text-success mb-1">
+                <i class="fas fa-play-circle me-2"></i>{{ rental_stats.active_rentals }}
+              </h4>
+              <p class="mb-0 text-muted">Alugueres Ativos</p>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="p-3 bg-light rounded">
+              <h4 class="text-info mb-1">
+                <i class="fas fa-calendar-day me-2"></i>{{ rental_stats.avg_rental_days|floatformat:1 }}
+              </h4>
+              <p class="mb-0 text-muted">Média de Dias</p>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="p-3 bg-light rounded">
+              <h4 class="text-warning mb-1">
+                <i class="fas fa-exclamation-triangle me-2"></i>{{ rental_stats.overdue_rentals }}
+              </h4>
+              <p class="mb-0 text-muted">Alugueres Atrasados</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Vehicle Utilization -->
+        <hr class="my-4">
+        <h6 class="text-primary mb-3">
+          <i class="fas fa-tachometer-alt me-2"></i>Utilização de Veículos
+        </h6>
+        <div class="progress mb-2" style="height: 20px;">
+          <div class="progress-bar bg-success progress-bar-striped" 
+               style="width: {{ rental_stats.utilization_rate }}%" 
+               role="progressbar" 
+               aria-valuenow="{{ rental_stats.utilization_rate }}" 
+               aria-valuemin="0" 
+               aria-valuemax="100">
+            {{ rental_stats.utilization_rate|floatformat:1 }}%
+          </div>
+        </div>
+        <small class="text-muted">Taxa de utilização da frota</small>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-trophy me-2"></i>Performance de Veículos
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th><i class="fas fa-car me-1"></i>Veículo</th>
+                <th><i class="fas fa-list me-1"></i>Alugueres</th>
+                <th><i class="fas fa-euro-sign me-1"></i>Receita</th>
+                <th><i class="fas fa-chart-bar me-1"></i>Utilização</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for vehicle in top_vehicles|slice:":5" %}
+              <tr>
+                <td>
+                  <div>
+                    <strong class="text-primary">{{ vehicle.registration_number }}</strong>
+                    <br>
+                    <small class="text-muted">{{ vehicle.brand__name }} {{ vehicle.model }}</small>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-info">{{ vehicle.rental_count }}</span>
+                </td>
+                <td>
+                  <strong class="text-success">€{{ vehicle.total_revenue|floatformat:2 }}</strong>
+                </td>
+                <td>
+                  <div class="progress mb-1" style="height: 15px;">
+                    <div class="progress-bar bg-gradient" 
+                         style="width: {{ vehicle.utilization }}%"
+                         role="progressbar" 
+                         aria-valuenow="{{ vehicle.utilization }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100"></div>
+                  </div>
+                  <small class="text-muted">{{ vehicle.utilization|floatformat:1 }}%</small>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">
+                  <i class="fas fa-info-circle me-2"></i>Nenhum veículo encontrado no período selecionado
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Analysis -->
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-users me-2"></i>Melhores Clientes
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th><i class="fas fa-user me-1"></i>Cliente</th>
+                <th><i class="fas fa-list me-1"></i>Alugueres</th>
+                <th><i class="fas fa-euro-sign me-1"></i>Total Gasto</th>
+                <th><i class="fas fa-calendar me-1"></i>Média Dias</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for customer in top_customers|slice:":5" %}
+              <tr>
+                <td>
+                  <div>
+                    <strong class="text-primary">{{ customer.first_name }} {{ customer.last_name }}</strong>
+                    <br>
+                    <small class="text-muted">
+                      <i class="fas fa-phone me-1"></i>{{ customer.phone_number }}
+                    </small>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-primary">{{ customer.rental_count }}</span>
+                </td>
+                <td>
+                  <strong class="text-success">€{{ customer.total_spent|floatformat:2 }}</strong>
+                </td>
+                <td>{{ customer.avg_days|floatformat:1 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">
+                  <i class="fas fa-info-circle me-2"></i>Nenhum cliente encontrado no período selecionado
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-warning text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-pie me-2"></i>Divisão de Despesas
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th><i class="fas fa-tag me-1"></i>Categoria</th>
+                <th><i class="fas fa-euro-sign me-1"></i>Montante</th>
+                <th><i class="fas fa-percentage me-1"></i>% do Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for expense in expense_breakdown %}
+              <tr>
+                <td>
+                  <strong class="text-primary">{{ expense.name }}</strong>
+                </td>
+                <td>
+                  <strong class="text-warning">€{{ expense.total_amount|floatformat:2 }}</strong>
+                </td>
+                <td>
+                  <div class="progress mb-1" style="height: 15px;">
+                    <div class="progress-bar bg-warning" 
+                         style="width: {{ expense.percentage }}%"
+                         role="progressbar" 
+                         aria-valuenow="{{ expense.percentage }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100"></div>
+                  </div>
+                  <small class="text-muted">{{ expense.percentage|floatformat:1 }}%</small>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">
+                  <i class="fas fa-info-circle me-2"></i>Nenhuma despesa encontrada no período selecionado
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Monthly Trends Chart -->
+<div class="row mb-4">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-line me-2"></i>Tendência de Receita Mensal
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="revenueChart" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Options -->
+<div class="row mb-4">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-download me-2"></i>Exportar Relatórios
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <button class="btn btn-outline-success w-100" onclick="exportReport('revenue')">
+              <i class="fas fa-file-excel me-2"></i>Relatório de Receitas
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-outline-info w-100" onclick="exportReport('rental')">
+              <i class="fas fa-file-excel me-2"></i>Relatório de Alugueres
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-outline-warning w-100" onclick="exportReport('expense')">
+              <i class="fas fa-file-excel me-2"></i>Relatório de Despesas
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-outline-primary w-100" onclick="exportReport('maintenance')">
+              <i class="fas fa-file-excel me-2"></i>Relatório de Manutenção
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Auto-submit form on period change
+    $('#period').change(function() {
+        const period = $(this).val();
+        if (period) {
+            const today = new Date();
+            let startDate, endDate = today.toISOString().split('T')[0];
+            
+            switch(period) {
+                case 'today':
+                    startDate = endDate;
+                    break;
+                case 'week':
+                    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    startDate = weekAgo.toISOString().split('T')[0];
+                    break;
+                case 'month':
+                    const monthAgo = new Date(today.getFullYear(), today.getMonth(), 1);
+                    startDate = monthAgo.toISOString().split('T')[0];
+                    break;
+                case 'quarter':
+                    const quarter = Math.floor(today.getMonth() / 3);
+                    const quarterStart = new Date(today.getFullYear(), quarter * 3, 1);
+                    startDate = quarterStart.toISOString().split('T')[0];
+                    break;
+                case 'year':
+                    const yearStart = new Date(today.getFullYear(), 0, 1);
+                    startDate = yearStart.toISOString().split('T')[0];
+                    break;
+            }
+            
+            $('#date_from').val(startDate);
+            $('#date_to').val(endDate);
+            $(this).closest('form').submit();
+        }
+    });
+    
+    // Initialize revenue chart
+    initRevenueChart();
+});
+
+function initRevenueChart() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    // Get monthly data from backend
+    const monthlyData = {{ monthly_revenue|default:"[]"|safe }};
+    
+    // Debug logging
+    console.log('Monthly data received:', monthlyData);
+    console.log('Number of data points:', monthlyData.length);
+    
+    // Check if we have data
+    if (!monthlyData || monthlyData.length === 0) {
+        ctx.fillStyle = '#6c757d';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sem dados disponíveis para o gráfico', ctx.canvas.width/2, ctx.canvas.height/2);
+        return;
+    }
+    
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: monthlyData.map(d => d.month),
+            datasets: [{
+                label: 'Receita',
+                data: monthlyData.map(d => d.revenue),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1,
+                fill: true
+            }, {
+                label: 'Comissão',
+                data: monthlyData.map(d => d.commission),
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '€' + value.toFixed(2);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': €' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function exportReport(type) {
+    const params = new URLSearchParams();
+    const dateFrom = $('#date_from').val();
+    const dateTo = $('#date_to').val();
+    
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    params.append('format', 'excel');
+    
+    const url = `/vehicle-rental/reports/export/${type}/?${params.toString()}`;
+    
+    // Show loading message
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>A exportar...';
+    button.disabled = true;
+    
+    // Create invisible link to trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${type}_report.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Reset button after delay
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }, 2000);
+}
+</script>
+{% endblock extra_js %}

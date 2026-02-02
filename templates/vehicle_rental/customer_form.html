@@ -1,0 +1,367 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">{{ title }}</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:customer_list' %}">Clientes</a></li>
+          <li class="breadcrumb-item active">{{ title }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>{{ title }}</h5>
+            <div class="card-header-right">
+              <a href="{% url 'vehicle_rental:customer_list' %}" class="btn btn-secondary btn-sm">
+                <i data-feather="arrow-left"></i> Voltar aos Clientes
+              </a>
+              {% if customer %}
+                <a href="{% url 'vehicle_rental:customer_detail' customer.pk %}" class="btn btn-info btn-sm">
+                  <i data-feather="eye"></i> Ver Cliente
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="post" novalidate>
+              {% csrf_token %}
+              
+              <!-- Personal Information Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-3">
+                    <i data-feather="user" class="me-2"></i>
+                    Informações Pessoais
+                  </h6>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                      Primeiro Nome <span class="text-danger">*</span>
+                    </label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                      <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                      Último Nome <span class="text-danger">*</span>
+                    </label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                      <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                      Endereço de Email
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                      <div class="text-danger small">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                      Número de Telefone <span class="text-danger">*</span>
+                    </label>
+                    {{ form.phone_number }}
+                    {% if form.phone_number.errors %}
+                      <div class="text-danger small">{{ form.phone_number.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">Incluir código do país (ex: +351)</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address Information Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="map-pin" class="me-2"></i>
+                    Informações de Endereço
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label for="{{ form.address_line_1.id_for_label }}" class="form-label">
+                      Linha de Endereço 1
+                    </label>
+                    {{ form.address_line_1 }}
+                    {% if form.address_line_1.errors %}
+                      <div class="text-danger small">{{ form.address_line_1.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label for="{{ form.address_line_2.id_for_label }}" class="form-label">
+                      Linha de Endereço 2 <small class="text-muted">(Opcional)</small>
+                    </label>
+                    {{ form.address_line_2 }}
+                    {% if form.address_line_2.errors %}
+                      <div class="text-danger small">{{ form.address_line_2.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.city.id_for_label }}" class="form-label">
+                      Cidade <span class="text-danger">*</span>
+                    </label>
+                    {{ form.city }}
+                    {% if form.city.errors %}
+                      <div class="text-danger small">{{ form.city.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.postal_code.id_for_label }}" class="form-label">
+                      Código Postal
+                    </label>
+                    {{ form.postal_code }}
+                    {% if form.postal_code.errors %}
+                      <div class="text-danger small">{{ form.postal_code.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.country.id_for_label }}" class="form-label">
+                      País <span class="text-danger">*</span>
+                    </label>
+                    {{ form.country }}
+                    {% if form.country.errors %}
+                      <div class="text-danger small">{{ form.country.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Identification Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="credit-card" class="me-2"></i>
+                    Informações de Identificação e Carta de Condução
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.id_number.id_for_label }}" class="form-label">
+                      Número de Identificação
+                    </label>
+                    {{ form.id_number }}
+                    {% if form.id_number.errors %}
+                      <div class="text-danger small">{{ form.id_number.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">Número do Cartão de Cidadão ou Passaporte</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.driving_license_number.id_for_label }}" class="form-label">
+                      Número da Carta de Condução <span class="text-danger">*</span>
+                    </label>
+                    {{ form.driving_license_number }}
+                    {% if form.driving_license_number.errors %}
+                      <div class="text-danger small">{{ form.driving_license_number.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.license_expiry_date.id_for_label }}" class="form-label">
+                      Data de Validade da Carta <span class="text-danger">*</span>
+                    </label>
+                    {{ form.license_expiry_date }}
+                    {% if form.license_expiry_date.errors %}
+                      <div class="text-danger small">{{ form.license_expiry_date.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">Clientes não podem alugar se a carta expirou</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="row mt-4">
+                <div class="col-12">
+                  <hr>
+                  <div class="d-flex justify-content-between">
+                    <a href="{% url 'vehicle_rental:customer_list' %}" class="btn btn-secondary">
+                      <i data-feather="x"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                      <i data-feather="save"></i> {{ submit_text }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+/* Custom styles for form sections */
+h6 {
+    color: #495057;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    border-radius: 0.375rem;
+    border: 1px solid #ced4da;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.btn {
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to Django form fields
+    const formControls = document.querySelectorAll('input[type="text"], input[type="email"], input[type="date"], input[type="number"], select, textarea');
+    formControls.forEach(function(element) {
+        element.classList.add('form-control');
+    });
+
+    // License expiry date validation
+    const licenseExpiryInput = document.querySelector('#{{ form.license_expiry_date.id_for_label }}');
+    if (licenseExpiryInput) {
+        licenseExpiryInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const currentDate = new Date();
+            
+            if (selectedDate < currentDate) {
+                this.style.borderColor = '#dc3545';
+                this.title = 'Warning: License has expired. Customer cannot rent vehicles.';
+            } else {
+                this.style.borderColor = '#28a745';
+                this.title = '';
+            }
+        });
+    }
+
+    // Phone number format assistance
+    const phoneInput = document.querySelector('#{{ form.phone_number.id_for_label }}');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length > 0 && !value.startsWith('260')) {
+                // Auto-add Zambia country code if not present
+                if (value.length === 9 && value.startsWith('9')) {
+                    this.value = '+260' + value;
+                } else if (!value.startsWith('+')) {
+                    this.value = '+' + value;
+                }
+            }
+        });
+    }
+
+    // Form validation enhancement
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = form.querySelectorAll('input[required], select[required]');
+            let isValid = true;
+            
+            requiredFields.forEach(function(field) {
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#dc3545';
+                    isValid = false;
+                } else {
+                    field.style.borderColor = '#ced4da';
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required fields.');
+            }
+        });
+    }
+});
+</script>
+
+{% endblock content %}

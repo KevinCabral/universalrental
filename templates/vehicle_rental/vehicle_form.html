@@ -1,0 +1,799 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{% if vehicle %}Editar Veículo{% else %}Adicionar Veículo{% endif %}{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">{% if vehicle %}Editar Veículo - {{ vehicle.registration_number }}{% else %}Registar Novo Veículo{% endif %}</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i></a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:vehicle_list' %}">Veículos</a></li>
+          <li class="breadcrumb-item active">{% if vehicle %}Editar Veículo{% else %}Adicionar Veículo{% endif %}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <h5>{% if vehicle %}Editar Veículo - {{ vehicle.registration_number }}{% else %}Adicionar Novo Veículo{% endif %}</h5>
+            <div class="card-header-right">
+              <a href="{% url 'vehicle_rental:vehicle_list' %}" class="btn btn-secondary btn-sm">
+                <i data-feather="arrow-left"></i> Voltar aos Veículos
+              </a>
+              {% if vehicle %}
+                <a href="{% url 'vehicle_rental:vehicle_detail' vehicle.pk %}" class="btn btn-info btn-sm">
+                  <i data-feather="eye"></i> Ver Veículo
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-body">
+            
+            <!-- Display Messages -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" id="vehicleForm" novalidate>
+              {% csrf_token %}
+
+              <!-- Vehicle Identification -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-3">
+                    <i data-feather="hash" class="me-2"></i>
+                    Identificação do Veículo
+                  </h6>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.registration_number.id_for_label }}" class="form-label required">{{ form.registration_number.label }}</label>
+                    {{ form.registration_number }}
+                    {% if form.registration_number.errors %}
+                      <div class="text-danger">
+                        {% for error in form.registration_number.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Número da matrícula</small>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.chassis_number.id_for_label }}" class="form-label">{{ form.chassis_number.label }}</label>
+                    {{ form.chassis_number }}
+                    {% if form.chassis_number.errors %}
+                      <div class="text-danger">
+                        {% for error in form.chassis_number.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Número de Identificação do Veículo (VIN)</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Basic Information -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="info" class="me-2"></i>
+                    Informações Básicas
+                  </h6>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.brand.id_for_label }}" class="form-label required">{{ form.brand.label }}</label>
+                    {{ form.brand }}
+                    {% if form.brand.errors %}
+                      <div class="text-danger">
+                        {% for error in form.brand.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">
+                      <a href="#" onclick="addNewBrand()" class="text-decoration-none">
+                        <i data-feather="plus" style="width: 14px; height: 14px;"></i> Add new brand
+                      </a>
+                    </small>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.model.id_for_label }}" class="form-label required">{{ form.model.label }}</label>
+                    {{ form.model }}
+                    {% if form.model.errors %}
+                      <div class="text-danger">
+                        {% for error in form.model.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.year.id_for_label }}" class="form-label required">{{ form.year.label }}</label>
+                    {{ form.year }}
+                    {% if form.year.errors %}
+                      <div class="text-danger">
+                        {% for error in form.year.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Description Field -->
+              <div class="row">
+                <div class="col-12">
+                  <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                      <div class="text-danger">
+                        {% for error in form.description.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Adicione informações adicionais sobre o veículo (opcional)</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vehicle Specifications -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="settings" class="me-2"></i>
+                    Vehicle Specifications
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.color.id_for_label }}" class="form-label">{{ form.color.label }}</label>
+                    {{ form.color }}
+                    {% if form.color.errors %}
+                      <div class="text-danger">
+                        {% for error in form.color.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.fuel_type.id_for_label }}" class="form-label">{{ form.fuel_type.label }}</label>
+                    {{ form.fuel_type }}
+                    {% if form.fuel_type.errors %}
+                      <div class="text-danger">
+                        {% for error in form.fuel_type.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.gearbox_type.id_for_label }}" class="form-label">{{ form.gearbox_type.label }}</label>
+                    {{ form.gearbox_type }}
+                    {% if form.gearbox_type.errors %}
+                      <div class="text-danger">
+                        {% for error in form.gearbox_type.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.engine_size.id_for_label }}" class="form-label">{{ form.engine_size.label }}</label>
+                    <div class="input-group">
+                      {{ form.engine_size }}
+                      <span class="input-group-text">L</span>
+                    </div>
+                    {% if form.engine_size.errors %}
+                      <div class="text-danger">
+                        {% for error in form.engine_size.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.number_of_seats.id_for_label }}" class="form-label">{{ form.number_of_seats.label }}</label>
+                    {{ form.number_of_seats }}
+                    {% if form.number_of_seats.errors %}
+                      <div class="text-danger">
+                        {% for error in form.number_of_seats.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                      <div class="text-danger">
+                        {% for error in form.status.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Features -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="star" class="me-2"></i>
+                    Features
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.air_conditioning }}
+                      <label class="form-check-label" for="{{ form.air_conditioning.id_for_label }}">
+                        {{ form.air_conditioning.label }}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.panoramic_roof }}
+                      <label class="form-check-label" for="{{ form.panoramic_roof.id_for_label }}">
+                        {{ form.panoramic_roof.label }}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Financial Information -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="dollar-sign" class="me-2"></i>
+                    Financial Information
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.purchase_price.id_for_label }}" class="form-label">{{ form.purchase_price.label }}</label>
+                    <div class="input-group">
+                      <span class="input-group-text">ECV</span>
+                      {{ form.purchase_price }}
+                    </div>
+                    {% if form.purchase_price.errors %}
+                      <div class="text-danger">
+                        {% for error in form.purchase_price.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.daily_rate.id_for_label }}" class="form-label">{{ form.daily_rate.label }}</label>
+                    <div class="input-group">
+                      <span class="input-group-text">ECV</span>
+                      {{ form.daily_rate }}
+                      <span class="input-group-text">/dia</span>
+                    </div>
+                    {% if form.daily_rate.errors %}
+                      <div class="text-danger">
+                        {% for error in form.daily_rate.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="{{ form.date_of_purchase.id_for_label }}" class="form-label">{{ form.date_of_purchase.label }}</label>
+                    {{ form.date_of_purchase }}
+                    {% if form.date_of_purchase.errors %}
+                      <div class="text-danger">
+                        {% for error in form.date_of_purchase.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vehicle Condition -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="activity" class="me-2"></i>
+                    Current Condition
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.mileage.id_for_label }}" class="form-label">{{ form.mileage.label }}</label>
+                    <div class="input-group">
+                      {{ form.mileage }}
+                      <span class="input-group-text">km</span>
+                    </div>
+                    {% if form.mileage.errors %}
+                      <div class="invalid-feedback d-block">
+                        {{ form.mileage.errors }}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vehicle Photo -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="camera" class="me-2"></i>
+                    Foto do Veículo
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.photo.id_for_label }}" class="form-label">{{ form.photo.label }}</label>
+                    {{ form.photo }}
+                    {% if form.photo.errors %}
+                      <div class="text-danger">
+                        {% for error in form.photo.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    {% if vehicle and vehicle.photo %}
+                      <small class="form-text text-muted">
+                        Arquivo atual: <a href="{{ vehicle.photo.url }}" target="_blank">Ver foto atual</a>
+                      </small>
+                    {% endif %}
+                  </div>
+                </div>
+                {% if vehicle and vehicle.photo %}
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label class="form-label">Pré-visualização Atual</label>
+                    <div class="border rounded p-2">
+                      <img src="{{ vehicle.photo.url }}" alt="Foto do veículo {{ vehicle.registration_number }}" 
+                           class="img-fluid rounded" style="max-height: 200px; object-fit: cover;">
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Additional Photos Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="image" class="me-2"></i>
+                    Fotos Adicionais
+                  </h6>
+                </div>
+              </div>
+
+              <!-- Show existing additional photos when editing -->
+              {% if vehicle and vehicle.additional_photos.exists %}
+              <div class="row mb-4">
+                <div class="col-12">
+                  <h6 class="text-muted mb-3">Fotos Existentes ({{ vehicle.additional_photos.count }})</h6>
+                  <div class="row">
+                    {% for photo in vehicle.additional_photos.all %}
+                    <div class="col-md-4 col-sm-6 mb-3">
+                      <div class="card h-100">
+                        <div class="position-relative">
+                          <img src="{{ photo.image.url }}" alt="{{ photo.title }}" 
+                               class="card-img-top" style="height: 200px; object-fit: cover;">
+                          {% if photo.is_primary %}
+                          <span class="position-absolute top-0 end-0 badge bg-warning m-2">
+                            <i data-feather="star"></i> Principal
+                          </span>
+                          {% endif %}
+                        </div>
+                        <div class="card-body p-2">
+                          <h6 class="card-title text-truncate mb-1">{{ photo.title|default:"Sem título" }}</h6>
+                          <small class="text-muted d-block">{{ photo.get_photo_type_display }}</small>
+                          {% if photo.description %}
+                          <small class="text-muted">{{ photo.description|truncatechars:50 }}</small>
+                          {% endif %}
+                          <div class="mt-2">
+                            <small class="text-muted">{{ photo.file_size_human }} | {{ photo.uploaded_at|date:"d/m/Y" }}</small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Multiple photo upload section -->
+              <div class="row">
+                <div class="col-12">
+                  <div class="mb-3">
+                    <label for="additional_photos" class="form-label">
+                      <i data-feather="upload" class="me-1"></i>
+                      Adicionar Novas Fotos
+                    </label>
+                    <input type="file" 
+                           class="form-control" 
+                           id="additional_photos" 
+                           name="additional_photos" 
+                           multiple 
+                           accept="image/*">
+                    <small class="form-text text-muted">
+                      Selecione múltiplas fotos (Ctrl+Click para selecionar várias). 
+                      Formatos suportados: JPG, PNG, WEBP. Máximo 10 MB por foto.
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dynamic photo metadata forms -->
+              <div id="photo-metadata-container" class="row" style="display: none;">
+                <div class="col-12">
+                  <h6 class="text-info mb-3">
+                    <i data-feather="edit-3" class="me-2"></i>
+                    Informações das Fotos
+                  </h6>
+                </div>
+              </div>
+
+              <!-- Photo preview section -->
+              <div id="photo-previews" class="row mt-3"></div>
+
+              <!-- Submit Buttons -->
+              <div class="row">
+                <div class="col-12">
+                  <hr class="mb-4 mt-4">
+                  <div class="d-flex justify-content-between">
+                    <a href="{% url 'vehicle_rental:vehicle_list' %}" class="btn btn-secondary">
+                      <i data-feather="arrow-left" class="me-1"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                      <i data-feather="{% if vehicle %}save{% else %}plus{% endif %}" class="me-1"></i>
+                      {% if vehicle %}Atualizar Veículo{% else %}Registar{% endif %}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize feather icons
+    feather.replace();
+    
+    // Add proper form control classes to match other forms
+    $('input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="time"], textarea, select').addClass('form-control');
+    
+    // Style form groups properly
+    $('.form-group').addClass('mb-3');
+    
+    // Add required indicators
+    $('.form-label.required').each(function() {
+        if (!$(this).find('.text-danger').length) {
+            $(this).append(' <span class="text-danger">*</span>');
+        }
+    });
+    
+    // Form validation feedback
+    $('#vehicleForm').on('submit', function() {
+        $(this).find('button[type="submit"]').prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...'
+        );
+    });
+    
+    // Auto-calculate daily rate suggestion based on purchase price
+    $('#id_purchase_price').on('input', function() {
+        var purchasePrice = parseFloat($(this).val());
+        if (purchasePrice > 0) {
+            var suggestedRate = Math.round(purchasePrice * 0.001); // 0.1% of purchase price
+            if (suggestedRate < 500) suggestedRate = 500; // Mínimo 500 ECV
+            
+            var currentRate = $('#id_daily_rate').val();
+            if (!currentRate || currentRate == '0') {
+                $('#id_daily_rate').val(suggestedRate.toFixed(2));
+            }
+        }
+    });
+    
+    // Photo preview functionality
+    $('#id_photo').on('change', function() {
+        var file = this.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                // Remove existing preview if any
+                $('#photo-preview').remove();
+                
+                // Create preview container
+                var previewHtml = `
+                    <div id="photo-preview" class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Nova Pré-visualização</label>
+                            <div class="border rounded p-2">
+                                <img src="${e.target.result}" alt="Pré-visualização da foto" 
+                                     class="img-fluid rounded" style="max-height: 200px; object-fit: cover;">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Add preview next to the photo input
+                $('#id_photo').closest('.col-md-6').parent().append(previewHtml);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Remove preview if no file selected
+            $('#photo-preview').remove();
+        }
+    });
+
+    // Multiple additional photos functionality
+    $('#additional_photos').on('change', function() {
+        var files = Array.from(this.files);
+        
+        if (files.length > 0) {
+            $('#photo-metadata-container').show();
+            $('#photo-previews').empty();
+            
+            // Create metadata forms for each photo
+            createPhotoMetadataForms(files);
+            
+            // Create previews for each photo
+            createPhotoPreviews(files);
+        } else {
+            $('#photo-metadata-container').hide();
+            $('#photo-previews').empty();
+        }
+    });
+});
+
+// Photo type choices (should match Django model choices)
+const PHOTO_TYPE_CHOICES = [
+    ['exterior_front', 'Exterior - Frente'],
+    ['exterior_back', 'Exterior - Traseira'],
+    ['exterior_left', 'Exterior - Lado Esquerdo'],
+    ['exterior_right', 'Exterior - Lado Direito'],
+    ['interior_dashboard', 'Interior - Painel'],
+    ['interior_seats', 'Interior - Bancos'],
+    ['interior_trunk', 'Interior - Bagageira'],
+    ['engine', 'Motor'],
+    ['documents', 'Documentos'],
+    ['damage', 'Danos/Problemas'],
+    ['other', 'Outros']
+];
+
+function createPhotoMetadataForms(files) {
+    var container = $('#photo-metadata-container');
+    
+    // Clear existing forms
+    container.find('.photo-metadata-form').remove();
+    
+    files.forEach(function(file, index) {
+        var formHtml = `
+            <div class="col-md-6 mb-4 photo-metadata-form">
+                <div class="card border-info">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0 text-info">
+                            <i data-feather="image" class="me-2"></i>
+                            Foto ${index + 1}: ${file.name}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="photo_type_${index}" class="form-label">Tipo de Foto</label>
+                            <select class="form-control" name="photo_type_${index}" id="photo_type_${index}">
+                                ${PHOTO_TYPE_CHOICES.map(([value, label]) => 
+                                    `<option value="${value}"${index === 0 && value === 'exterior_front' ? ' selected' : ''}>${label}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="title_${index}" class="form-label">Título</label>
+                            <input type="text" class="form-control" name="title_${index}" id="title_${index}" 
+                                   value="Foto ${index + 1}" maxlength="200">
+                        </div>
+                        <div class="mb-3">
+                            <label for="description_${index}" class="form-label">Descrição</label>
+                            <textarea class="form-control" name="description_${index}" id="description_${index}" 
+                                      rows="2" maxlength="500" placeholder="Descrição opcional da foto"></textarea>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input primary-photo-checkbox" type="checkbox" 
+                                   name="is_primary_${index}" id="is_primary_${index}" value="on"
+                                   ${index === 0 ? 'checked' : ''}>
+                            <label class="form-check-label" for="is_primary_${index}">
+                                <i data-feather="star" class="me-1"></i>
+                                Definir como foto principal
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.append(formHtml);
+    });
+    
+    // Initialize feather icons for new elements
+    feather.replace();
+    
+    // Ensure only one primary photo is selected
+    $('.primary-photo-checkbox').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('.primary-photo-checkbox').not(this).prop('checked', false);
+        }
+    });
+}
+
+function createPhotoPreviews(files) {
+    var container = $('#photo-previews');
+    
+    files.forEach(function(file, index) {
+        if (file.type.startsWith('image/')) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var previewHtml = `
+                    <div class="col-md-4 col-sm-6 mb-3">
+                        <div class="card">
+                            <img src="${e.target.result}" alt="Preview ${index + 1}" 
+                                 class="card-img-top" style="height: 200px; object-fit: cover;">
+                            <div class="card-body p-2">
+                                <h6 class="card-title text-truncate mb-1">Foto ${index + 1}</h6>
+                                <small class="text-muted">${file.name}</small><br>
+                                <small class="text-muted">${formatFileSize(file.size)}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.append(previewHtml);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Add new brand functionality
+function addNewBrand() {
+    var brandName = prompt('Enter new brand name:');
+    if (brandName && brandName.trim()) {
+        // Get CSRF token
+        var csrfToken = $('[name=csrfmiddlewaretoken]').val();
+        
+        $.ajax({
+            url: '{% url "vehicle_rental:api_create_brand" %}',
+            method: 'POST',
+            data: {
+                'name': brandName.trim(),
+                'csrfmiddlewaretoken': csrfToken
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Add new option to select
+                    var newOption = new Option(response.brand.name, response.brand.id, true, true);
+                    $('#id_brand').append(newOption).trigger('change');
+                    
+                    // Show success message
+                    showMessage('success', 'Brand "' + response.brand.name + '" created successfully!');
+                } else {
+                    alert('Error: ' + (response.error || 'Failed to create brand'));
+                }
+            },
+            error: function(xhr) {
+                var errorMessage = 'Failed to create brand';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMessage = response.error || errorMessage;
+                } catch (e) {
+                    // Use default error message
+                }
+                alert('Error: ' + errorMessage);
+            }
+        });
+    }
+}
+
+// Helper function to show messages
+function showMessage(type, message) {
+    var alertClass = 'alert-' + (type === 'error' ? 'danger' : type);
+    var alert = '<div class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
+                message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                '</div>';
+    
+    $('#vehicleForm').prepend(alert);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
+}
+</script>
+{% endblock extra_js %}
+<!-- MULTIPLE_PHOTOS_UPDATE_TEST_12345 -->

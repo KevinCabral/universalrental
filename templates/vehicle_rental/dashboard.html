@@ -1,0 +1,330 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard DriveOn | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+    
+    <!-- Page Header with DriveOn Branding -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="card bg-primary text-white shadow-lg">
+          <div class="card-body p-4">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                  <img src="{% static 'img/driveon.png' %}" alt="DriveOn" style="width: 80px; height: 80px; background: white; padding: 8px; border-radius: 8px;" class="me-3">
+                  <div>
+                    <h2 class="mb-1 fw-bold">DriveOn Car Rental</h2>
+                    <h5 class="mb-0 opacity-75">Dashboard de Gestão</h5>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 text-end">
+                <i data-feather="activity" style="width: 48px; height: 48px;" class="opacity-50"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Breadcrumb -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+            <li class="breadcrumb-item active">Dashboard DriveOn</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+
+<!-- Key Metrics with improved design -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <h2 class="mb-1">{{ total_vehicles }}</h2>
+            <h6 class="text-muted mb-0">Total Vehicles</h6>
+            <small class="text-success">
+              <i data-feather="trending-up" style="width: 14px; height: 14px;"></i>
+              Active fleet
+            </small>
+          </div>
+          <div class="col-4 text-end">
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+              <i data-feather="truck" class="text-primary" style="width: 30px; height: 30px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <h2 class="mb-1 text-success">{{ available_vehicles }}</h2>
+            <h6 class="text-muted mb-0">Available</h6>
+            <small class="text-success">
+              <i data-feather="check-circle" style="width: 14px; height: 14px;"></i>
+              Ready to rent
+            </small>
+          </div>
+          <div class="col-4 text-end">
+            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+              <i data-feather="check-circle" class="text-success" style="width: 30px; height: 30px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <h2 class="mb-1 text-warning">{{ active_rentals }}</h2>
+            <h6 class="text-muted mb-0">Active Rentals</h6>
+            <small class="text-warning">
+              <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
+              Currently rented
+            </small>
+          </div>
+          <div class="col-4 text-end">
+            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+              <i data-feather="calendar" class="text-warning" style="width: 30px; height: 30px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <h2 class="mb-1 text-danger">{{ overdue_rentals }}</h2>
+            <h6 class="text-muted mb-0">Overdue</h6>
+            <small class="text-danger">
+              <i data-feather="alert-triangle" style="width: 14px; height: 14px;"></i>
+              Need attention
+            </small>
+          </div>
+          <div class="col-4 text-end">
+            <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+              <i data-feather="alert-triangle" class="text-danger" style="width: 30px; height: 30px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Revenue Card with improved design -->
+<div class="row mb-4">
+  <div class="col-md-12">
+    <div class="card border-0 shadow-sm bg-gradient-success text-white">
+      <div class="card-body p-4">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <h6 class="text-white-50 mb-2">Monthly Revenue</h6>
+            <h2 class="text-white mb-1">{{ monthly_revenue|floatformat:0 }} ECV</h2>
+            <p class="text-white-50 mb-0">Revenue generated this month</p>
+          </div>
+          <div class="col-4 text-end">
+            <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+              <i data-feather="dollar-sign" class="text-white" style="width: 40px; height: 40px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5>Recent Rentals</h5>
+        <div class="card-header-right">
+          <a href="{% url 'vehicle_rental:rental_list' %}" class="btn btn-primary btn-sm">View All</a>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if recent_rentals %}
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Vehicle</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rental in recent_rentals %}
+                <tr>
+                  <td>{{ rental.customer.full_name }}</td>
+                  <td>{{ rental.vehicle.registration_number }}</td>
+                  <td>
+                    <span class="badge badge-{% if rental.status == 'active' %}success{% elif rental.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                      {{ rental.get_status_display }}
+                    </span>
+                  </td>
+                  <td>{{ rental.total_amount|floatformat:0 }} ECV</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted">No recent rentals found.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5>Upcoming Maintenance</h5>
+        <div class="card-header-right">
+          <a href="{% url 'vehicle_rental:maintenance_list' %}" class="btn btn-primary btn-sm">View All</a>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if upcoming_maintenance %}
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for maintenance in upcoming_maintenance %}
+                <tr>
+                  <td>{{ maintenance.vehicle.registration_number }}</td>
+                  <td>{{ maintenance.get_maintenance_type_display }}</td>
+                  <td>{{ maintenance.date_scheduled|date:"M d, Y" }}</td>
+                  <td>
+                    <span class="badge badge-{% if maintenance.status == 'scheduled' %}info{% elif maintenance.status == 'in_progress' %}warning{% else %}success{% endif %}">
+                      {{ maintenance.get_status_display }}
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted">No upcoming maintenance found.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-light border-0 pb-0">
+        <h5 class="mb-0 text-dark fw-semibold d-flex align-items-center">
+          <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+            <i data-feather="zap" class="text-primary" style="width: 18px; height: 18px;"></i>
+          </div>
+          Quick Actions
+        </h5>
+      </div>
+      <div class="card-body pt-3">
+        <div class="row g-3">
+          <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vehicle_rental:rental_create' %}" class="btn btn-success w-100 py-3 shadow-sm border-0 position-relative overflow-hidden">
+              <div class="d-flex flex-column align-items-center">
+                <div class="bg-white bg-opacity-20 rounded-circle p-2 mb-2">
+                  <i data-feather="plus-circle" style="width: 24px; height: 24px;"></i>
+                </div>
+                <span class="fw-semibold">New Rental</span>
+                <small class="opacity-75">Create booking</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vehicle_rental:vehicle_list' %}" class="btn btn-primary w-100 py-3 shadow-sm border-0 position-relative overflow-hidden">
+              <div class="d-flex flex-column align-items-center">
+                <div class="bg-white bg-opacity-20 rounded-circle p-2 mb-2">
+                  <i data-feather="truck" style="width: 24px; height: 24px;"></i>
+                </div>
+                <span class="fw-semibold">Manage Vehicles</span>
+                <small class="opacity-75">Fleet management</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vehicle_rental:customer_list' %}" class="btn btn-info w-100 py-3 shadow-sm border-0 position-relative overflow-hidden">
+              <div class="d-flex flex-column align-items-center">
+                <div class="bg-white bg-opacity-20 rounded-circle p-2 mb-2">
+                  <i data-feather="users" style="width: 24px; height: 24px;"></i>
+                </div>
+                <span class="fw-semibold">Manage Customers</span>
+                <small class="opacity-75">Customer database</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-lg-3 col-md-6">
+            <a href="{% url 'vehicle_rental:reports_dashboard' %}" class="btn btn-warning w-100 py-3 shadow-sm border-0 position-relative overflow-hidden">
+              <div class="d-flex flex-column align-items-center">
+                <div class="bg-white bg-opacity-20 rounded-circle p-2 mb-2">
+                  <i data-feather="bar-chart-2" style="width: 24px; height: 24px;"></i>
+                </div>
+                <span class="fw-semibold">View Reports</span>
+                <small class="opacity-75">Analytics & insights</small>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize feather icons
+    feather.replace();
+    
+    // Auto-refresh dashboard every 30 seconds
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+});
+</script>
+{% endblock extra_js %}

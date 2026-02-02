@@ -1,0 +1,186 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Editar Perfil | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Editar Perfil</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'profile' %}">Perfil</a></li>
+          <li class="breadcrumb-item active">Editar</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Edit Profile Form -->
+    <div class="row justify-content-center">
+      <div class="col-xl-8 col-lg-10">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light border-bottom">
+            <h5 class="mb-0 text-primary fw-bold">
+              <i class="fas fa-user-edit me-2"></i>
+              Editar Informações do Perfil
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            <form method="post">
+              {% csrf_token %}
+              
+              <!-- Profile Avatar Section -->
+              <div class="text-center mb-4">
+                <div class="avatar-container d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 100px; height: 100px; background: linear-gradient(135deg, #3498db, #2980b9); 
+                            border-radius: 50%; box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);">
+                  <i class="fas fa-user text-white" style="font-size: 2.5rem;"></i>
+                </div>
+                <p class="text-muted small">@{{ user.username }}</p>
+              </div>
+
+              <div class="row">
+                <!-- First Name -->
+                <div class="col-md-6 mb-4">
+                  <label for="first_name" class="form-label fw-bold">
+                    <i class="fas fa-user me-1 text-muted"></i>
+                    Primeiro Nome
+                  </label>
+                  <input type="text" class="form-control form-control-lg" id="first_name" name="first_name" 
+                         value="{{ user.first_name }}" placeholder="Digite o primeiro nome"
+                         style="border-radius: 8px; border: 1.5px solid #e1e8ed; padding: 12px 16px;">
+                </div>
+
+                <!-- Last Name -->
+                <div class="col-md-6 mb-4">
+                  <label for="last_name" class="form-label fw-bold">
+                    <i class="fas fa-user me-1 text-muted"></i>
+                    Último Nome
+                  </label>
+                  <input type="text" class="form-control form-control-lg" id="last_name" name="last_name" 
+                         value="{{ user.last_name }}" placeholder="Digite o último nome"
+                         style="border-radius: 8px; border: 1.5px solid #e1e8ed; padding: 12px 16px;">
+                </div>
+
+                <!-- Email -->
+                <div class="col-md-12 mb-4">
+                  <label for="email" class="form-label fw-bold">
+                    <i class="fas fa-envelope me-1 text-muted"></i>
+                    Email
+                  </label>
+                  <input type="email" class="form-control form-control-lg" id="email" name="email" 
+                         value="{{ user.email }}" placeholder="Digite o email"
+                         style="border-radius: 8px; border: 1.5px solid #e1e8ed; padding: 12px 16px;">
+                </div>
+
+                <!-- Username (Read-only) -->
+                <div class="col-md-12 mb-4">
+                  <label for="username" class="form-label fw-bold">
+                    <i class="fas fa-at me-1 text-muted"></i>
+                    Nome de Utilizador
+                  </label>
+                  <input type="text" class="form-control form-control-lg" id="username" 
+                         value="{{ user.username }}" readonly
+                         style="border-radius: 8px; border: 1.5px solid #e1e8ed; padding: 12px 16px; background-color: #f8f9fa;">
+                  <small class="text-muted">O nome de utilizador não pode ser alterado.</small>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="row mt-4">
+                <div class="col-md-6 mb-3">
+                  <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg fw-bold"
+                            style="background: linear-gradient(135deg, #3498db, #2980b9); border: none; 
+                                   border-radius: 12px; padding: 12px; letter-spacing: 0.5px;">
+                      <i class="fas fa-save me-2"></i>
+                      Guardar Alterações
+                    </button>
+                  </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <div class="d-grid">
+                    <a href="{% url 'profile' %}" class="btn btn-outline-secondary btn-lg fw-medium"
+                       style="border-radius: 12px; padding: 12px;">
+                      <i class="fas fa-times me-2"></i>
+                      Cancelar
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </form>
+            
+            <!-- Additional Actions -->
+            <hr class="my-4">
+            <div class="text-center">
+              <a href="{% url 'change_password' %}" class="btn btn-outline-warning">
+                <i class="fas fa-key me-2"></i>
+                Alterar Senha
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+  .form-control:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3) !important;
+  }
+  
+  .avatar-container {
+    transition: all 0.3s ease;
+  }
+  
+  .avatar-container:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4) !important;
+  }
+  
+  .card {
+    border-radius: 15px;
+    border: none;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-hide messages after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut('slow');
+    }, 5000);
+});
+</script>
+{% endblock extra_js %}

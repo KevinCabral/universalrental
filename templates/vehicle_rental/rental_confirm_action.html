@@ -1,0 +1,122 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{% if action == 'confirmar' %}Confirmar Aluguer{% else %}Cancelar Aluguer{% endif %}{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">{% if action == 'confirmar' %}Confirmar Aluguer{% else %}Cancelar Aluguer{% endif %}</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_list' %}">Alugueres</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_detail' rental.pk %}">Aluguer #{{ rental.id }}</a></li>
+          <li class="breadcrumb-item active">{% if action == 'confirmar' %}Confirmar{% else %}Cancelar{% endif %}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-8 mx-auto">
+        <div class="card">
+          <div class="card-header">
+            <h5>{% if action == 'confirmar' %}Confirmar Aluguer{% else %}Cancelar Aluguer{% endif %}</h5>
+          </div>
+          <div class="card-body">
+            
+            <!-- Rental Summary -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <table class="table table-borderless">
+                  <tr>
+                    <td><strong>Aluguer #:</strong></td>
+                    <td>{{ rental.id|stringformat:"05d" }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Cliente:</strong></td>
+                    <td>{{ rental.customer.first_name }} {{ rental.customer.last_name }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Veículo:</strong></td>
+                    <td>{{ rental.vehicle.registration_number }} - {{ rental.vehicle.brand.name }} {{ rental.vehicle.model }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div class="col-md-6">
+                <table class="table table-borderless">
+                  <tr>
+                    <td><strong>Data de Início:</strong></td>
+                    <td>{{ rental.start_date|date:"d/m/Y H:i" }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Data de Fim:</strong></td>
+                    <td>{{ rental.end_date|date:"d/m/Y H:i" }}</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Valor Total:</strong></td>
+                    <td><strong>€{{ rental.total_amount|floatformat:2 }}</strong></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <!-- Confirmation Message -->
+            <div class="alert alert-{% if action == 'confirmar' %}warning{% else %}danger{% endif %}" role="alert">
+              <i data-feather="{% if action == 'confirmar' %}check-circle{% else %}x-circle{% endif %}" class="me-2"></i>
+              {% if action == 'confirmar' %}
+                <strong>Tem a certeza que deseja confirmar este aluguer?</strong><br>
+                Esta ação irá:
+                <ul class="mt-2 mb-0">
+                  <li>Alterar o estado do aluguer para "Confirmado"</li>
+                  <li>Marcar o veículo como "Alugado"</li>
+                  <li>Tornar o veículo indisponível para outros alugueres</li>
+                </ul>
+              {% else %}
+                <strong>Tem a certeza que deseja cancelar este aluguer?</strong><br>
+                Esta ação irá:
+                <ul class="mt-2 mb-0">
+                  <li>Alterar o estado do aluguer para "Cancelado"</li>
+                  <li>Libertar o veículo para outros alugueres</li>
+                  <li>Esta ação não pode ser desfeita</li>
+                </ul>
+              {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <form method="post">
+              {% csrf_token %}
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}" class="btn btn-secondary">
+                  <i data-feather="arrow-left" class="me-1"></i> Voltar
+                </a>
+                <button type="submit" class="btn btn-{% if action == 'confirmar' %}success{% else %}danger{% endif %}">
+                  <i data-feather="{% if action == 'confirmar' %}check{% else %}x{% endif %}" class="me-1"></i>
+                  {% if action == 'confirmar' %}Confirmar Aluguer{% else %}Cancelar Aluguer{% endif %}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    feather.replace();
+});
+</script>
+{% endblock extra_js %}

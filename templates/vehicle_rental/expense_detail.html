@@ -1,0 +1,339 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Detalhes da Despesa #{{ expense.id }} | Sistema de Aluguer{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Detalhes da Despesa</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:expense_list' %}">Despesas</a></li>
+          <li class="breadcrumb-item active">Despesa #{{ expense.id }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+          <div class="d-flex align-items-center mb-2 mb-md-0">
+            <h4 class="me-3 mb-0">Despesa #{{ expense.id }}</h4>
+            <span class="badge bg-{% if expense.is_approved %}success{% else %}warning{% endif %} fs-6 px-3 py-2">
+              {% if expense.is_approved %}
+                <i class="fas fa-check-circle me-1"></i> Aprovado
+              {% else %}
+                <i class="fas fa-clock me-1"></i> Pendente
+              {% endif %}
+            </span>
+          </div>
+          <div class="btn-group" role="group">
+            <a href="{% url 'vehicle_rental:expense_list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i> Voltar
+            </a>
+            <a href="{% url 'vehicle_rental:expense_create' %}" class="btn btn-success">
+              <i class="fas fa-plus me-2"></i> Criar Nova
+            </a>
+            <a href="{% url 'vehicle_rental:expense_edit' expense.pk %}" class="btn btn-primary">
+              <i class="fas fa-edit me-2"></i> Editar
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expense Details Card -->
+    <div class="row">
+      <div class="col-lg-8 col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-receipt text-primary me-2"></i>
+              Informações da Despesa
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            <div class="row g-4">
+              <!-- Left Column -->
+              <div class="col-md-6">
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Valor</label>
+                  <div class="fs-4 fw-bold text-success">
+                    <i class="fas fa-euro-sign me-1"></i>{{ expense.amount|floatformat:2 }}
+                  </div>
+                </div>
+                
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Veículo</label>
+                  <div class="fs-6">
+                    {% if expense.vehicle %}
+                      <a href="{% url 'vehicle_rental:vehicle_detail' expense.vehicle.pk %}" 
+                         class="text-decoration-none fw-bold text-primary">
+                        <i class="fas fa-car me-2"></i>{{ expense.vehicle.registration_number }}
+                        <small class="text-muted d-block">{{ expense.vehicle.brand.name }} {{ expense.vehicle.model }}</small>
+                      </a>
+                    {% else %}
+                      <span class="text-muted fst-italic">N/A</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Fornecedor</label>
+                  <div class="fs-6">
+                    {% if expense.vendor %}
+                      <i class="fas fa-building me-2 text-muted"></i>{{ expense.vendor }}
+                    {% else %}
+                      <span class="text-muted fst-italic">N/A</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column -->
+              <div class="col-md-6">
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Categoria</label>
+                  <div class="fs-6">
+                    <i class="fas fa-tag me-2 text-muted"></i>{{ expense.category.name }}
+                  </div>
+                </div>
+                
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Data</label>
+                  <div class="fs-6">
+                    <i class="fas fa-calendar me-2 text-muted"></i>{{ expense.date|date:"d/m/Y" }}
+                  </div>
+                </div>
+
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Estado</label>
+                  <div class="fs-6">
+                    {% if expense.is_approved %}
+                      <span class="badge bg-success fs-6 px-3 py-2">
+                        <i class="fas fa-check-circle me-1"></i> Aprovado
+                      </span>
+                    {% else %}
+                      <span class="badge bg-warning fs-6 px-3 py-2">
+                        <i class="fas fa-clock me-1"></i> Pendente
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Information Row -->
+            <div class="row g-4 mt-2">
+              <div class="col-md-6">
+                {% if expense.rental %}
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Aluguer Relacionado</label>
+                  <div class="fs-6">
+                    <a href="{% url 'vehicle_rental:rental_detail' expense.rental.pk %}" 
+                       class="text-decoration-none text-primary fw-bold">
+                      <i class="fas fa-file-contract me-2"></i>Aluguer #{{ expense.rental.id|stringformat:"05d" }}
+                    </a>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                {% if expense.receipt_number %}
+                <div class="expense-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Número do Recibo</label>
+                  <div class="fs-6">
+                    <i class="fas fa-receipt me-2 text-muted"></i>{{ expense.receipt_number }}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side Information -->
+      <div class="col-lg-4 col-md-12">
+        <!-- Description Card -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-align-left text-primary me-2"></i>
+              Descrição
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if expense.description %}
+              <p class="mb-0 text-break">{{ expense.description }}</p>
+            {% else %}
+              <p class="mb-0 text-muted fst-italic">Nenhuma descrição fornecida</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Approval Information -->
+        {% if expense.is_approved and expense.approved_by %}
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-check-circle me-2"></i>
+              Informações de Aprovação
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-user text-muted me-2"></i>
+              <strong>{{ expense.approved_by.get_full_name|default:expense.approved_by.username }}</strong>
+            </div>
+            <div class="d-flex align-items-center text-muted">
+              <i class="fas fa-clock me-2"></i>
+              <small>{{ expense.approved_at|date:"d/m/Y H:i" }}</small>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Stats Card -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-info-circle text-primary me-2"></i>
+              Informações Adicionais
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-6">
+                <div class="border-end">
+                  <h5 class="text-primary mb-0">{{ expense.id }}</h5>
+                  <small class="text-muted">ID da Despesa</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <h5 class="{% if expense.is_approved %}text-success{% else %}text-warning{% endif %} mb-0">
+                  {% if expense.is_approved %}
+                    <i class="fas fa-check"></i>
+                  {% else %}
+                    <i class="fas fa-clock"></i>
+                  {% endif %}
+                </h5>
+                <small class="text-muted">Estado</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+  .expense-field {
+    border-left: 3px solid #e3f2fd;
+    padding-left: 15px;
+    transition: border-left-color 0.3s ease;
+  }
+  
+  .expense-field:hover {
+    border-left-color: #2196f3;
+  }
+  
+  .card {
+    border: none;
+    border-radius: 10px;
+  }
+  
+  .card-header {
+    border-radius: 10px 10px 0 0 !important;
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+  }
+  
+  .btn-group .btn {
+    border-radius: 6px;
+    margin-left: 0.25rem;
+  }
+  
+  .btn-group .btn:first-child {
+    margin-left: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .btn-group .btn {
+      margin: 0.125rem 0;
+      border-radius: 6px;
+    }
+    
+    .d-flex.justify-content-between {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+    
+    .expense-field {
+      margin-bottom: 1.5rem !important;
+    }
+  }
+  
+  .text-break {
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+  
+  .shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize Feather icons if available
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+    
+    // Add hover effects to cards
+    $('.card').hover(
+        function() {
+            $(this).addClass('shadow-lg').removeClass('shadow-sm');
+        },
+        function() {
+            $(this).addClass('shadow-sm').removeClass('shadow-lg');
+        }
+    );
+    
+    // Mobile responsive button handling
+    function handleResponsiveButtons() {
+        if ($(window).width() < 768) {
+            $('.btn-group').removeClass('btn-group').addClass('btn-group-vertical');
+        } else {
+            $('.btn-group-vertical').removeClass('btn-group-vertical').addClass('btn-group');
+        }
+    }
+    
+    handleResponsiveButtons();
+    $(window).resize(handleResponsiveButtons);
+});
+</script>
+{% endblock extra_js %}

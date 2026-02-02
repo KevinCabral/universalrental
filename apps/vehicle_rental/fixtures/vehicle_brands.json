@@ -1,0 +1,42 @@
+[
+  {
+    "model": "vehicle_rental.vehiclebrand",
+    "pk": 1,
+    "fields": {
+      "name": "Toyota",
+      "country_of_origin": "Japan"
+    }
+  },
+  {
+    "model": "vehicle_rental.vehiclebrand",
+    "pk": 2,
+    "fields": {
+      "name": "Ford",
+      "country_of_origin": "USA"
+    }
+  },
+  {
+    "model": "vehicle_rental.vehiclebrand",
+    "pk": 3,
+    "fields": {
+      "name": "Nissan",
+      "country_of_origin": "Japan"
+    }
+  },
+  {
+    "model": "vehicle_rental.vehiclebrand",
+    "pk": 4,
+    "fields": {
+      "name": "Hyundai",
+      "country_of_origin": "South Korea"
+    }
+  },
+  {
+    "model": "vehicle_rental.vehiclebrand",
+    "pk": 5,
+    "fields": {
+      "name": "Mazda",
+      "country_of_origin": "Japan"
+    }
+  }
+]

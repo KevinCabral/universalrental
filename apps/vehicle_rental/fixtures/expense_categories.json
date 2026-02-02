@@ -1,0 +1,74 @@
+[
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 1,
+    "fields": {
+      "name": "Fuel",
+      "description": "Fuel costs and refueling expenses",
+      "is_active": true
+    }
+  },
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 2,
+    "fields": {
+      "name": "Maintenance",
+      "description": "Regular maintenance and servicing costs",
+      "is_active": true
+    }
+  },
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 3,
+    "fields": {
+      "name": "Repairs",
+      "description": "Repair costs for damages and breakdowns",
+      "is_active": true
+    }
+  },
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 4,
+    "fields": {
+      "name": "Insurance",
+      "description": "Insurance premiums and claims",
+      "is_active": true
+    }
+  },
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 5,
+    "fields": {
+      "name": "Registration",
+      "description": "Vehicle registration and licensing fees",
+      "is_active": true
+    }
+  },
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 6,
+    "fields": {
+      "name": "Cleaning",
+      "description": "Vehicle cleaning and detailing costs",
+      "is_active": true
+    }
+  },
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 7,
+    "fields": {
+      "name": "Parking",
+      "description": "Parking fees and tolls",
+      "is_active": true
+    }
+  },
+  {
+    "model": "vehicle_rental.expensecategory",
+    "pk": 8,
+    "fields": {
+      "name": "Other",
+      "description": "Miscellaneous expenses",
+      "is_active": true
+    }
+  }
+]

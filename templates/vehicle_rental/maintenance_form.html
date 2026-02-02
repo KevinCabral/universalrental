@@ -1,0 +1,469 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | Sistema de Aluguer{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">{{ title }}</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:maintenance_list' %}">Manutenção</a></li>
+          <li class="breadcrumb-item active">{{ title }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+          <div class="d-flex align-items-center mb-2 mb-md-0">
+            <h4 class="me-3 mb-0">{{ title }}</h4>
+          </div>
+          <div class="btn-group" role="group">
+            <a href="{% url 'vehicle_rental:maintenance_list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i> Voltar à Lista
+            </a>
+            {% if maintenance %}
+              <a href="{% url 'vehicle_rental:maintenance_detail' maintenance.pk %}" class="btn btn-info">
+                <i class="fas fa-eye me-2"></i> Ver Registo
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-tools text-primary me-2"></i>
+              Formulário de Manutenção
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            
+            <!-- Display Messages -->
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+
+            <form method="post" id="maintenanceForm" novalidate>
+              {% csrf_token %}
+              
+              <!-- Basic Information Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-3 text-primary">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Informações Básicas
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.vehicle.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-car me-1 text-muted"></i>
+                      Veículo <span class="text-danger">*</span>
+                    </label>
+                    {{ form.vehicle }}
+                    {% if form.vehicle.errors %}
+                      <div class="text-danger small mt-1">{{ form.vehicle.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.maintenance_type.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-cog me-1 text-muted"></i>
+                      Tipo <span class="text-danger">*</span>
+                    </label>
+                    {{ form.maintenance_type }}
+                    {% if form.maintenance_type.errors %}
+                      <div class="text-danger small mt-1">{{ form.maintenance_type.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.date_scheduled.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-calendar-alt me-1 text-muted"></i>
+                      Data Agendada <span class="text-danger">*</span>
+                    </label>
+                    {{ form.date_scheduled }}
+                    {% if form.date_scheduled.errors %}
+                      <div class="text-danger small mt-1">{{ form.date_scheduled.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.date_completed.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-calendar-check me-1 text-muted"></i>
+                      Data de Conclusão
+                    </label>
+                    {{ form.date_completed }}
+                    {% if form.date_completed.errors %}
+                      <div class="text-danger small mt-1">{{ form.date_completed.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.mileage.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-tachometer-alt me-1 text-muted"></i>
+                      Quilometragem (km) <span class="text-danger">*</span>
+                    </label>
+                    {{ form.mileage }}
+                    {% if form.mileage.errors %}
+                      <div class="text-danger small mt-1">{{ form.mileage.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-flag me-1 text-muted"></i>
+                      Estado <span class="text-danger">*</span>
+                    </label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                      <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service Details Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4 text-primary">
+                    <i class="fas fa-wrench me-2"></i>
+                    Detalhes do Serviço
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.service_provider.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-building me-1 text-muted"></i>
+                      Fornecedor de Serviços <span class="text-danger">*</span>
+                    </label>
+                    {{ form.service_provider }}
+                    {% if form.service_provider.errors %}
+                      <div class="text-danger small mt-1">{{ form.service_provider.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.invoice_number.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-receipt me-1 text-muted"></i>
+                      Número da Fatura
+                    </label>
+                    {{ form.invoice_number }}
+                    {% if form.invoice_number.errors %}
+                      <div class="text-danger small mt-1">{{ form.invoice_number.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.service_description.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-align-left me-1 text-muted"></i>
+                      Descrição do Serviço <span class="text-danger">*</span>
+                    </label>
+                    {{ form.service_description }}
+                    {% if form.service_description.errors %}
+                      <div class="text-danger small mt-1">{{ form.service_description.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.parts_replaced.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-cogs me-1 text-muted"></i>
+                      Peças Substituídas
+                    </label>
+                    {{ form.parts_replaced }}
+                    {% if form.parts_replaced.errors %}
+                      <div class="text-danger small mt-1">{{ form.parts_replaced.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cost Information Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4 text-success">
+                    <i class="fas fa-euro-sign me-2"></i>
+                    Detalhamento de Custos
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.labor_cost.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-user-cog me-1 text-muted"></i>
+                      Custo de Mão de Obra (€)
+                    </label>
+                    {{ form.labor_cost }}
+                    {% if form.labor_cost.errors %}
+                      <div class="text-danger small mt-1">{{ form.labor_cost.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.parts_cost.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-cogs me-1 text-muted"></i>
+                      Custo de Peças (€)
+                    </label>
+                    {{ form.parts_cost }}
+                    {% if form.parts_cost.errors %}
+                      <div class="text-danger small mt-1">{{ form.parts_cost.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.other_costs.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-receipt me-1 text-muted"></i>
+                      Outros Custos (€)
+                    </label>
+                    {{ form.other_costs }}
+                    {% if form.other_costs.errors %}
+                      <div class="text-danger small mt-1">{{ form.other_costs.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Warranty & Next Service Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4 text-info">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Garantia e Próximo Serviço
+                  </h6>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.warranty_until.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-calendar-check me-1 text-muted"></i>
+                      Garantia Até
+                    </label>
+                    {{ form.warranty_until }}
+                    {% if form.warranty_until.errors %}
+                      <div class="text-danger small mt-1">{{ form.warranty_until.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.next_service_date.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-calendar-plus me-1 text-muted"></i>
+                      Data do Próximo Serviço
+                    </label>
+                    {{ form.next_service_date }}
+                    {% if form.next_service_date.errors %}
+                      <div class="text-danger small mt-1">{{ form.next_service_date.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.next_service_mileage.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-tachometer-alt me-1 text-muted"></i>
+                      Quilometragem do Próximo Serviço (km)
+                    </label>
+                    {{ form.next_service_mileage }}
+                    {% if form.next_service_mileage.errors %}
+                      <div class="text-danger small mt-1">{{ form.next_service_mileage.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group mb-3">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold">
+                      <i class="fas fa-sticky-note me-1 text-muted"></i>
+                      Notas
+                    </label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                      <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="row">
+                <div class="col-12">
+                  <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a href="{% url 'vehicle_rental:maintenance_list' %}" class="btn btn-outline-secondary">
+                      <i class="fas fa-times me-2"></i>
+                      Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-save me-2"></i>
+                      {{ submit_text|default:"Guardar Registo" }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #495057;
+  }
+  
+  .form-control, .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #2196f3;
+    box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
+  }
+  
+  .card {
+    border: none;
+    border-radius: 10px;
+  }
+  
+  .card-header {
+    border-radius: 10px 10px 0 0 !important;
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+  }
+  
+  .btn-group .btn {
+    border-radius: 6px;
+    margin-left: 0.25rem;
+  }
+  
+  .btn-group .btn:first-child {
+    margin-left: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .btn-group {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .btn-group .btn {
+      margin-left: 0;
+      margin-bottom: 0.25rem;
+    }
+  }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-calculate total cost when cost fields change
+    const laborCost = document.getElementById('{{ form.labor_cost.id_for_label }}');
+    const partsCost = document.getElementById('{{ form.parts_cost.id_for_label }}');
+    const otherCosts = document.getElementById('{{ form.other_costs.id_for_label }}');
+    
+    // Create a total cost display element
+    const costSection = document.querySelector('.text-success').closest('.row');
+    if (costSection && !document.getElementById('totalCostDisplay')) {
+        const totalRow = document.createElement('div');
+        totalRow.className = 'col-12 mt-3';
+        totalRow.innerHTML = `
+            <div class="alert alert-info" id="totalCostDisplay" style="display: none;">
+                <strong><i class="fas fa-calculator me-2"></i>Custo Total: €<span id="totalAmount">0.00</span></strong>
+            </div>
+        `;
+        costSection.appendChild(totalRow);
+    }
+    
+    function calculateTotal() {
+        const labor = parseFloat(laborCost?.value) || 0;
+        const parts = parseFloat(partsCost?.value) || 0;
+        const other = parseFloat(otherCosts?.value) || 0;
+        const total = labor + parts + other;
+        
+        const totalDisplay = document.getElementById('totalCostDisplay');
+        const totalAmount = document.getElementById('totalAmount');
+        
+        if (totalDisplay && totalAmount) {
+            totalAmount.textContent = total.toFixed(2);
+            totalDisplay.style.display = total > 0 ? 'block' : 'none';
+        }
+    }
+    
+    if (laborCost) laborCost.addEventListener('input', calculateTotal);
+    if (partsCost) partsCost.addEventListener('input', calculateTotal);
+    if (otherCosts) otherCosts.addEventListener('input', calculateTotal);
+    
+    // Initial calculation
+    calculateTotal();
+});
+</script>
+{% endblock extra_js %}

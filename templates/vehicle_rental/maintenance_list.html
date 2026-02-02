@@ -1,0 +1,546 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Lista de Manutenção | Sistema de Aluguer{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Gestão de Manutenção</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item active">Manutenção</li>
+        </ul>
+      </div>
+    </div>
+
+<!-- Filters and Actions -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-filter text-primary me-2"></i>
+          Filtrar Registos de Manutenção
+        </h5>
+        <div class="card-header-right">
+          <a href="{% url 'vehicle_rental:maintenance_create' %}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i> Adicionar Manutenção
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <div class="col-md-2">
+            <label for="vehicle" class="form-label fw-bold">
+              <i class="fas fa-car me-1 text-muted"></i>
+              Veículo
+            </label>
+            <select name="vehicle" id="vehicle" class="form-select">
+              <option value="">Todos os Veículos</option>
+              {% for vehicle in vehicles %}
+                <option value="{{ vehicle.id }}" {% if current_filters.vehicle == vehicle.id|stringformat:"s" %}selected{% endif %}>
+                  {{ vehicle.registration_number }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="type" class="form-label fw-bold">
+              <i class="fas fa-cog me-1 text-muted"></i>
+              Tipo
+            </label>
+            <select name="type" id="type" class="form-select">
+              <option value="">Todos os Tipos</option>
+              {% for value, label in type_choices %}
+                <option value="{{ value }}" {% if current_filters.type == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="status" class="form-label fw-bold">
+              <i class="fas fa-flag me-1 text-muted"></i>
+              Estado
+            </label>
+            <select name="status" id="status" class="form-select">
+              <option value="">Todos os Estados</option>
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="date_from" class="form-label fw-bold">
+              <i class="fas fa-calendar-alt me-1 text-muted"></i>
+              Data Inicial
+            </label>
+            <input type="date" name="date_from" id="date_from" class="form-control" 
+                   value="{{ current_filters.date_from }}">
+          </div>
+          <div class="col-md-2">
+            <label for="date_to" class="form-label fw-bold">
+              <i class="fas fa-calendar-check me-1 text-muted"></i>
+              Data Final
+            </label>
+            <input type="date" name="date_to" id="date_to" class="form-control" 
+                   value="{{ current_filters.date_to }}">
+          </div>
+          <div class="col-md-1">
+            <label class="form-label">&nbsp;</label>
+            <div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search me-1"></i>
+                Filtrar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-3">
+  <div class="col-md-3">
+    <div class="card bg-info text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Custo Total</h6>
+            <h5 class="mb-0 fw-bold">{{ summary.total_cost|floatformat:2 }} CV</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-coins" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-warning text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Agendadas</h6>
+            <h5 class="mb-0 fw-bold">{{ summary.scheduled_count }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-calendar-alt" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-primary text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Em Progresso</h6>
+            <h5 class="mb-0 fw-bold">{{ summary.in_progress_count }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-cog fa-spin" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-success text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Completas</h6>
+            <h5 class="mb-0 fw-bold">{{ summary.completed_count }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-check-circle" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance List -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light border-bottom">
+        <h5 class="mb-0 text-primary fw-bold">
+          <i class="fas fa-tools me-2"></i>
+          Registos de Manutenção 
+          <span class="text-muted fw-normal">({{ page_obj.paginator.count }} total)</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if page_obj %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-car me-2"></i>Veículo
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-tools me-2"></i>Informações de Manutenção
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-calendar me-2"></i>Datas
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>Estado
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-coins me-2"></i>Custos
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-calendar-plus me-2"></i>Próximo Serviço
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-cogs me-2"></i>Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for maintenance in page_obj %}
+                <tr>
+                  <td>
+                    <div>
+                      <strong>{{ maintenance.vehicle.registration_number }}</strong>
+                      <br>
+                      <small class="text-muted">{{ maintenance.vehicle.brand.name }} {{ maintenance.vehicle.model }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ maintenance.description }}</strong>
+                      <br>
+                      <small class="text-muted">Tipo: {{ maintenance.get_maintenance_type_display }}</small>
+                      {% if maintenance.service_provider %}
+                        <br><small class="text-muted">Fornecedor: {{ maintenance.service_provider }}</small>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ maintenance.scheduled_date|date:"d/m/Y" }}</strong>
+                      {% if maintenance.completed_date %}
+                        <br><small class="text-success">Concluído: {{ maintenance.completed_date|date:"d/m/Y" }}</small>
+                      {% elif maintenance.scheduled_date < today %}
+                        <br><small class="text-danger">Atrasado</small>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-{% if maintenance.status == 'scheduled' %}warning{% elif maintenance.status == 'in_progress' %}primary{% elif maintenance.status == 'completed' %}success{% elif maintenance.status == 'cancelled' %}danger{% else %}secondary{% endif %}">
+                      {{ maintenance.get_status_display }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if maintenance.status == 'completed' %}
+                      <div>
+                        <strong>{{ maintenance.get_total_cost|floatformat:2 }} CV</strong>
+                        {% if maintenance.labor_cost %}
+                          <br><small class="text-muted">Mão de obra: {{ maintenance.labor_cost|floatformat:2 }} CV</small>
+                        {% endif %}
+                        {% if maintenance.parts_cost %}
+                          <br><small class="text-muted">Peças: {{ maintenance.parts_cost|floatformat:2 }} CV</small>
+                        {% endif %}
+                        {% if maintenance.other_cost %}
+                          <br><small class="text-muted">Outros: {{ maintenance.other_cost|floatformat:2 }} CV</small>
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <span class="text-muted">Pendente</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if maintenance.next_service_date %}
+                      <strong>{{ maintenance.next_service_date|date:"d/m/Y" }}</strong>
+                      {% if maintenance.next_service_date < warning_date %}
+                        <br><span class="badge badge-warning badge-sm">Próximo em breve</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">Não definido</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <a href="{% url 'vehicle_rental:maintenance_detail' maintenance.pk %}" 
+                         class="btn btn-sm btn-primary text-white me-1 shadow-sm" 
+                         title="Ver Detalhes" data-bs-toggle="tooltip">
+                        <i class="fas fa-eye me-1"></i>
+                        <span class="d-none d-md-inline">Ver</span>
+                      </a>
+                      <a href="{% url 'vehicle_rental:maintenance_edit' maintenance.pk %}" 
+                         class="btn btn-sm btn-outline-primary me-1 shadow-sm" 
+                         title="Editar" data-bs-toggle="tooltip">
+                        <i class="fas fa-edit me-1"></i>
+                        <span class="d-none d-md-inline">Editar</span>
+                      </a>
+                      {% if maintenance.status == 'scheduled' %}
+                        <button class="btn btn-sm btn-outline-info me-1 shadow-sm" 
+                                onclick="startMaintenance({{ maintenance.pk }})" 
+                                title="Iniciar Manutenção" data-bs-toggle="tooltip">
+                          <i class="fas fa-play me-1"></i>
+                          <span class="d-none d-lg-inline">Iniciar</span>
+                        </button>
+                      {% elif maintenance.status == 'in_progress' %}
+                        <button class="btn btn-sm btn-outline-success me-1 shadow-sm" 
+                                onclick="completeMaintenance({{ maintenance.pk }})" 
+                                title="Concluir Manutenção" data-bs-toggle="tooltip">
+                          <i class="fas fa-check me-1"></i>
+                          <span class="d-none d-lg-inline">Concluir</span>
+                        </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Paginação -->
+          {% if page_obj.has_other_pages %}
+          <div class="px-3 pb-3">
+            <nav aria-label="Paginação de manutenção">
+              <ul class="pagination justify-content-center mb-0">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link text-primary border-primary" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                    <i class="fas fa-chevron-left me-1"></i>
+                    Anterior
+                  </a>
+                </li>
+              {% endif %}
+
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link bg-primary border-primary">{{ num }}</span>
+                  </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                  <li class="page-item">
+                    <a class="page-link text-primary border-primary" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link text-primary border-primary" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                    Próximo
+                    <i class="fas fa-chevron-right ms-1"></i>
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+            </nav>
+          </div>
+          {% endif %}
+
+        {% else %}
+          <div class="text-center py-5 px-3">
+            <i class="fas fa-tools text-primary opacity-50" style="font-size: 4rem;"></i>
+            <h5 class="mt-3 text-muted fw-semibold">Nenhuma manutenção encontrada</h5>
+            <p class="text-muted mb-4">Tente ajustar os filtros ou adicione um novo registo de manutenção.</p>
+            <a href="{% url 'vehicle_rental:maintenance_create' %}" class="btn btn-primary shadow-sm">
+              <i class="fas fa-plus me-2"></i>Adicionar Primeira Manutenção
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<style>
+/* Enhanced hover effects for buttons */
+.btn-group .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Table row hover effect */
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Enhanced pagination */
+.pagination .page-link {
+    transition: all 0.2s ease-in-out;
+}
+
+.pagination .page-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}
+
+/* Card shadow enhancement */
+.card {
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Badge styling improvements */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.025em;
+}
+
+/* Icon styling in headers */
+.table-light th i {
+    opacity: 0.8;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    // Initialize feather icons
+    feather.replace();
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Auto-submit form on select change
+    $('#vehicle, #status').change(function() {
+        $(this).closest('form').submit();
+    });
+});
+
+function startMaintenance(maintenanceId) {
+    if (confirm('Marcar esta manutenção como iniciada?')) {
+        $.ajax({
+            url: '/vehicle-rental/api/maintenance/' + maintenanceId + '/start/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Erro ao iniciar manutenção: ' + xhr.responseText);
+            }
+        });
+    }
+}
+
+function completeMaintenance(maintenanceId) {
+    // Create a modal or form for completion details
+    const modal = `
+        <div class="modal fade" id="completeModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Concluir Manutenção</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form id="completeForm">
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>Data de Conclusão</label>
+                                <input type="datetime-local" name="completed_date" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Custo de Mão de Obra (ECV)</label>
+                                <input type="number" name="labor_cost" class="form-control" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Custo de Peças (CV)</label>
+                                <input type="number" name="parts_cost" class="form-control" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Outros Custos (CV)</label>
+                                <input type="number" name="other_cost" class="form-control" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Período de Garantia (meses)</label>
+                                <input type="number" name="warranty_period_months" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Data do Próximo Serviço</label>
+                                <input type="date" name="next_service_date" class="form-control">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success">Concluir Manutenção</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('body').append(modal);
+    
+    // Set default completion date to now
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const localTime = new Date(now.getTime() - tzOffset);
+    $('input[name="completed_date"]').val(localTime.toISOString().slice(0, 16));
+    
+    $('#completeModal').modal('show');
+    
+    $('#completeForm').submit(function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: '/vehicle-rental/api/maintenance/' + maintenanceId + '/complete/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: $(this).serialize(),
+            success: function(response) {
+                $('#completeModal').modal('hide');
+                location.reload();
+            },
+            error: function(xhr) {
+                alert('Erro ao concluir manutenção: ' + xhr.responseText);
+            }
+        });
+    });
+    
+    $('#completeModal').on('hidden.bs.modal', function() {
+        $(this).remove();
+    });
+}
+</script>
+{% endblock extra_js %}

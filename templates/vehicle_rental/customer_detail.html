@@ -1,0 +1,382 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Detalhes do Cliente - {{ customer.first_name }} {{ customer.last_name }} | Sistema de Aluguer{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Detalhes do Cliente</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:customer_list' %}">Clientes</a></li>
+          <li class="breadcrumb-item active">{{ customer.first_name }} {{ customer.last_name }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+          <div class="d-flex align-items-center mb-2 mb-md-0">
+            <h4 class="me-3 mb-0">{{ customer.first_name }} {{ customer.last_name }}</h4>
+            <span class="badge bg-{% if customer.is_blacklisted %}danger{% else %}success{% endif %} fs-6 px-3 py-2">
+              {% if customer.is_blacklisted %}
+                <i class="fas fa-user-slash me-1"></i> Lista Negra
+              {% else %}
+                <i class="fas fa-user-check me-1"></i> Ativo
+              {% endif %}
+            </span>
+          </div>
+          <div class="btn-group" role="group">
+            <a href="{% url 'vehicle_rental:customer_list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i> Voltar
+            </a>
+            {% if not customer.is_blacklisted %}
+              <a href="{% url 'vehicle_rental:rental_create' %}?customer={{ customer.pk }}" class="btn btn-success">
+                <i class="fas fa-calendar-plus me-2"></i> Criar Aluguer
+              </a>
+            {% endif %}
+            <a href="{% url 'vehicle_rental:customer_edit' customer.pk %}" class="btn btn-primary">
+              <i class="fas fa-edit me-2"></i> Editar
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Details Card -->
+    <div class="row">
+      <div class="col-lg-8 col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-user text-primary me-2"></i>
+              Informações do Cliente
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            <div class="row g-4">
+              <!-- Left Column -->
+              <div class="col-md-6">
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Nome Completo</label>
+                  <div class="fs-5 fw-bold text-dark">
+                    <i class="fas fa-user me-2"></i>{{ customer.first_name }} {{ customer.last_name }}
+                  </div>
+                </div>
+                
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Data de Nascimento</label>
+                  <div class="fs-6">
+                    <i class="fas fa-birthday-cake me-2 text-muted"></i>{{ customer.date_of_birth|date:"d/m/Y" }}
+                  </div>
+                </div>
+
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Número de Identificação</label>
+                  <div class="fs-6">
+                    <i class="fas fa-id-card me-2 text-muted"></i>{{ customer.id_number }}
+                    {% if customer.id_verified %}
+                      <span class="badge bg-success fs-6 px-2 py-1 ms-2">
+                        <i class="fas fa-check me-1"></i> Verificado
+                      </span>
+                    {% else %}
+                      <span class="badge bg-warning fs-6 px-2 py-1 ms-2">
+                        <i class="fas fa-exclamation me-1"></i> Não Verificado
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Estado</label>
+                  <div class="fs-6">
+                    {% if customer.is_blacklisted %}
+                      <span class="badge bg-danger fs-6 px-3 py-2">
+                        <i class="fas fa-user-slash me-1"></i> Lista Negra
+                      </span>
+                    {% else %}
+                      <span class="badge bg-success fs-6 px-3 py-2">
+                        <i class="fas fa-user-check me-1"></i> Ativo
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column -->
+              <div class="col-md-6">
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Email</label>
+                  <div class="fs-6">
+                    <i class="fas fa-envelope me-2 text-muted"></i>{{ customer.email }}
+                  </div>
+                </div>
+                
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Telefone</label>
+                  <div class="fs-6">
+                    <i class="fas fa-phone me-2 text-muted"></i>{{ customer.phone_number }}
+                  </div>
+                </div>
+
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Endereço</label>
+                  <div class="fs-6">
+                    {% if customer.address %}
+                      <i class="fas fa-map-marker-alt me-2 text-muted"></i>{{ customer.address }}
+                    {% else %}
+                      <span class="text-muted fst-italic">N/A</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Criado</label>
+                  <div class="fs-6">
+                    <i class="fas fa-calendar me-2 text-muted"></i>{{ customer.created_at|date:"d/m/Y" }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- License Information Row -->
+            <div class="row g-4 mt-2">
+              <div class="col-md-6">
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Número da Carta</label>
+                  <div class="fs-6">
+                    <i class="fas fa-id-badge me-2 text-muted"></i>{{ customer.driving_license_number }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Data de Validade</label>
+                  <div class="fs-6">
+                    {% if customer.license_expiry_date %}
+                      <i class="fas fa-calendar-check me-2 text-muted"></i>{{ customer.license_expiry_date|date:"d/m/Y" }}
+                      {% if customer.license_expiry_date < today %}
+                        <span class="badge bg-danger fs-6 px-2 py-1 ms-2">
+                          <i class="fas fa-times me-1"></i> Expirada
+                        </span>
+                      {% elif customer.license_expiry_date < warning_date %}
+                        <span class="badge bg-warning fs-6 px-2 py-1 ms-2">
+                          <i class="fas fa-exclamation me-1"></i> Expira Em Breve
+                        </span>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted fst-italic">N/A</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Side Information -->
+      <div class="col-lg-4 col-md-12">
+        <!-- Quick Actions Card -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-bolt text-primary me-2"></i>
+              Ações Rápidas
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if not customer.is_blacklisted %}
+              <a href="{% url 'vehicle_rental:rental_create' %}?customer={{ customer.pk }}" class="btn btn-success w-100 mb-2">
+                <i class="fas fa-calendar-plus me-2"></i> Criar Aluguer
+              </a>
+            {% endif %}
+            
+            <a href="{% url 'vehicle_rental:customer_edit' customer.pk %}" class="btn btn-primary w-100 mb-2">
+              <i class="fas fa-edit me-2"></i> Editar Cliente
+            </a>
+            
+            {% if not customer.is_blacklisted %}
+              <button class="btn btn-danger w-100 mb-2" onclick="blacklistCustomer()">
+                <i class="fas fa-user-slash me-2"></i> Adicionar à Lista Negra
+              </button>
+            {% else %}
+              <button class="btn btn-warning w-100 mb-2" onclick="unblacklistCustomer()">
+                <i class="fas fa-user-check me-2"></i> Remover da Lista Negra
+              </button>
+            {% endif %}
+          </div>
+        </div>
+        
+        <!-- Statistics Card -->
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-chart-bar text-primary me-2"></i>
+              Estatísticas
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="text-center mb-3">
+              <div class="fs-3 fw-bold text-primary">{{ total_rentals }}</div>
+              <div class="text-muted">Total de Alugueres</div>
+            </div>
+            <div class="text-center mb-3">
+              <div class="fs-3 fw-bold text-success">{{ total_spent|floatformat:0 }} ECV</div>
+              <div class="text-muted">Total Gasto</div>
+            </div>
+            <div class="text-center">
+              <div class="fs-3 fw-bold text-info">{{ avg_rental_days|floatformat:1 }}</div>
+              <div class="text-muted">Média de Dias de Aluguer</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rental History -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-history text-primary me-2"></i>
+              Histórico de Alugueres
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if rentals %}
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th><i class="fas fa-car me-1"></i> Veículo</th>
+                      <th><i class="fas fa-calendar me-1"></i> Datas</th>
+                      <th><i class="fas fa-info-circle me-1"></i> Estado</th>
+                      <th><i class="fas fa-euro-sign me-1"></i> Valor</th>
+                      <th><i class="fas fa-cog me-1"></i> Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for rental in rentals %}
+                    <tr>
+                      <td>
+                        <div class="fw-bold">{{ rental.vehicle.registration_number }}</div>
+                        <small class="text-muted">{{ rental.vehicle.brand.name }} {{ rental.vehicle.model }}</small>
+                      </td>
+                      <td>{{ rental.start_date|date:"d/m" }} - {{ rental.end_date|date:"d/m/Y" }}</td>
+                      <td>
+                        <span class="badge bg-{% if rental.status == 'completed' %}success{% elif rental.status == 'active' %}warning{% else %}secondary{% endif %} fs-6 px-2 py-1">
+                          {{ rental.get_status_display }}
+                        </span>
+                      </td>
+                      <td class="fw-bold">{{ rental.total_amount|floatformat:0 }} ECV</td>
+                      <td>
+                        <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}" class="btn btn-sm btn-outline-primary">
+                          <i class="fas fa-eye"></i>
+                        </a>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Nenhum histórico de aluguer para este cliente.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+  .customer-field {
+    border-left: 3px solid #e3f2fd;
+    padding-left: 15px;
+    transition: border-left-color 0.3s ease;
+  }
+  
+  .customer-field:hover {
+    border-left-color: #2196f3;
+  }
+  
+  .card {
+    border: none;
+    border-radius: 10px;
+  }
+  
+  .card-header {
+    border-radius: 10px 10px 0 0 !important;
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+  }
+  
+  .btn-group .btn {
+    border-radius: 6px;
+    margin-left: 0.25rem;
+  }
+  
+  .btn-group .btn:first-child {
+    margin-left: 0;
+  }
+  
+  @media (max-width: 768px) {
+    .btn-group {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .btn-group .btn {
+      margin-left: 0;
+      margin-bottom: 0.25rem;
+    }
+  }
+  
+  .text-break {
+    word-wrap: break-word;
+    word-break: break-word;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize tooltips and other Bootstrap components
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+
+function blacklistCustomer() {
+    if (confirm('Tem certeza que deseja adicionar este cliente à lista negra?')) {
+        // Implementation would go here
+        alert('Funcionalidade não implementada ainda - use a interface de administração');
+    }
+}
+
+function unblacklistCustomer() {
+    if (confirm('Tem certeza que deseja remover este cliente da lista negra?')) {
+        // Implementation would go here
+        alert('Funcionalidade não implementada ainda - use a interface de administração');
+    }
+}
+</script>
+{% endblock extra_js %}

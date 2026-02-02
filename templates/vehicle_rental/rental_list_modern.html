@@ -1,0 +1,391 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Lista de Alugueres | Sistema de Aluguer{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Gestão de Alugueres</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item active">Alugueres</li>
+        </ul>
+      </div>
+    </div>
+
+<!-- Filters and Actions -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-filter text-primary me-2"></i>
+          Filtrar Alugueres
+        </h5>
+        <div class="card-header-right">
+          <a href="{% url 'vehicle_rental:rental_create' %}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i> Novo Aluguer
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <div class="col-md-2">
+            <label for="status" class="form-label fw-bold">
+              <i class="fas fa-flag me-1 text-muted"></i>
+              Estado
+            </label>
+            <select name="status" id="status" class="form-select">
+              <option value="">Todos os Estados</option>
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="date_from" class="form-label fw-bold">
+              <i class="fas fa-calendar-alt me-1 text-muted"></i>
+              Data de Início
+            </label>
+            <input type="date" name="date_from" id="date_from" class="form-control" 
+                   value="{{ current_filters.date_from }}">
+          </div>
+          <div class="col-md-2">
+            <label for="date_to" class="form-label fw-bold">
+              <i class="fas fa-calendar-check me-1 text-muted"></i>
+              Data de Fim
+            </label>
+            <input type="date" name="date_to" id="date_to" class="form-control" 
+                   value="{{ current_filters.date_to }}">
+          </div>
+          <div class="col-md-4">
+            <label for="search" class="form-label fw-bold">
+              <i class="fas fa-search me-1 text-muted"></i>
+              Pesquisar
+            </label>
+            <input type="text" name="search" id="search" class="form-control" 
+                   placeholder="Nome do cliente, matrícula do veículo..." 
+                   value="{{ current_filters.search }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <div>
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search me-1"></i>
+                Filtrar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-3">
+  <div class="col-md-3">
+    <div class="card bg-primary text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Total de Alugueres</h6>
+            <h5 class="mb-0 fw-bold">{{ total_rentals|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-calendar-alt" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-warning text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Ativos</h6>
+            <h5 class="mb-0 fw-bold">{{ active_rentals|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-clock" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-success text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Concluídos</h6>
+            <h5 class="mb-0 fw-bold">{{ completed_rentals|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-check-circle" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-secondary text-white shadow-sm h-100">
+      <div class="card-body py-2 px-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <h6 class="card-title mb-1 fw-semibold small">Pendentes</h6>
+            <h5 class="mb-0 fw-bold">{{ pending_rentals|default:0 }}</h5>
+          </div>
+          <div class="col-auto">
+            <i class="fas fa-hourglass-half" style="font-size: 1.5rem; opacity: 0.8;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rental List -->
+<div class="row">
+  <div class="col-md-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-light border-bottom">
+        <h5 class="mb-0 text-primary fw-bold">
+          <i class="fas fa-calendar-alt me-2"></i>
+          Lista de Alugueres 
+          <span class="text-muted fw-normal">({{ page_obj.paginator.count }} total)</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if page_obj %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-hashtag me-2"></i>Aluguer
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-user me-2"></i>Cliente
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-car me-2"></i>Veículo
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-calendar me-2"></i>Datas
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>Estado
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-coins me-2"></i>Valor Total
+                  </th>
+                  <th class="fw-semibold text-primary">
+                    <i class="fas fa-cogs me-2"></i>Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rental in page_obj %}
+                <tr>
+                  <td>
+                    <strong>#{{ rental.id|stringformat:"05d" }}</strong>
+                    <br>
+                    <small class="text-muted">{{ rental.created_at|date:"d M Y" }}</small>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.customer.first_name }} {{ rental.customer.last_name }}</strong>
+                      <br>
+                      <small class="text-muted"><i class="fas fa-phone me-1"></i>{{ rental.customer.phone_number }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.vehicle.registration_number }}</strong>
+                      <br>
+                      <small class="text-muted">{{ rental.vehicle.brand.name }} {{ rental.vehicle.model }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.start_date|date:"d M" }} - {{ rental.end_date|date:"d M Y" }}</strong>
+                      <br>
+                      <small class="text-muted">{{ rental.get_rental_duration }} dias</small>
+                      <br>
+                      {% if rental.actual_return_date %}
+                        <small class="{% if rental.is_overdue %}text-danger{% else %}text-success{% endif %}">
+                          Devolvido: {{ rental.actual_return_date|date:"d M Y" }}
+                        </small>
+                      {% else %}
+                        {% if rental.status == 'completed' %}
+                          <small class="text-success">Devolvido: {{ rental.end_date|date:"d M Y" }}</small>
+                        {% elif rental.status == 'active' %}
+                          <small class="text-warning">Não Devolvido</small>
+                        {% elif rental.status == 'cancelled' %}
+                          <small class="text-muted">Cancelado</small>
+                        {% else %}
+                          <small class="text-info">{{ rental.get_status_display }}</small>
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-{% if rental.status == 'active' %}warning{% elif rental.status == 'completed' %}success{% elif rental.status == 'cancelled' %}danger{% else %}secondary{% endif %}">
+                      {{ rental.get_status_display }}
+                    </span>
+                    {% if rental.is_overdue %}
+                      <br><span class="badge bg-danger text-white mt-1">Em Atraso</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div>
+                      <strong>{{ rental.total_amount|floatformat:0 }} ECV</strong>
+                      {% if rental.commission_amount %}
+                        <br><small class="text-muted">Comissão: {{ rental.commission_amount|floatformat:0 }} ECV</small>
+                      {% endif %}
+                      {% if rental.late_return_fee %}
+                        <br><small class="text-warning">Taxa Atraso: {{ rental.late_return_fee|floatformat:0 }} ECV</small>
+                      {% endif %}
+                      {% if rental.damage_fee %}
+                        <br><small class="text-danger">Taxa Danos: {{ rental.damage_fee|floatformat:0 }} ECV</small>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <a href="{% url 'vehicle_rental:rental_detail' rental.pk %}" 
+                         class="btn btn-sm btn-primary text-white me-1 shadow-sm" 
+                         title="Ver Detalhes" data-bs-toggle="tooltip">
+                        <i class="fas fa-eye me-1"></i>
+                        <span class="d-none d-lg-inline">Ver</span>
+                      </a>
+                      {% if rental.status == 'pending' %}
+                      <a href="{% url 'vehicle_rental:rental_confirm' rental.pk %}" 
+                         class="btn btn-sm btn-outline-success me-1 shadow-sm" 
+                         title="Confirmar Aluguer" data-bs-toggle="tooltip">
+                        <i class="fas fa-check-circle me-1"></i>
+                        <span class="d-none d-lg-inline">Confirmar</span>
+                      </a>
+                      <a href="{% url 'vehicle_rental:rental_cancel' rental.pk %}" 
+                         class="btn btn-sm btn-outline-danger me-1 shadow-sm" 
+                         title="Cancelar Aluguer" data-bs-toggle="tooltip">
+                        <i class="fas fa-times-circle me-1"></i>
+                        <span class="d-none d-lg-inline">Cancelar</span>
+                      </a>
+                      {% elif rental.status == 'confirmed' or rental.status == 'active' %}
+                      <a href="{% url 'vehicle_rental:rental_return' rental.pk %}" 
+                         class="btn btn-sm btn-outline-warning me-1 shadow-sm" 
+                         title="Registar Devolução" data-bs-toggle="tooltip">
+                        <i class="fas fa-undo-alt me-1"></i>
+                        <span class="d-none d-lg-inline">Devolver</span>
+                      </a>
+                      {% elif rental.status == 'completed' %}
+                      <a href="{% url 'vehicle_rental:rental_invoice' rental.pk %}" 
+                         class="btn btn-sm btn-outline-info me-1 shadow-sm" 
+                         title="Gerar Fatura" data-bs-toggle="tooltip">
+                        <i class="fas fa-file-invoice me-1"></i>
+                        <span class="d-none d-lg-inline">Fatura</span>
+                      </a>
+                      {% endif %}
+                      <a href="{% url 'vehicle_rental:rental_edit' rental.pk %}" 
+                         class="btn btn-sm btn-outline-secondary shadow-sm" 
+                         title="Editar" data-bs-toggle="tooltip">
+                        <i class="fas fa-edit me-1"></i>
+                        <span class="d-none d-lg-inline">Editar</span>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          {% if page_obj.has_other_pages %}
+          <div class="card-footer bg-light">
+            <nav aria-label="Paginação de alugueres">
+              <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                      <i class="fas fa-chevron-left"></i> Anterior
+                    </a>
+                  </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                  {% if page_obj.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                      Próximo <i class="fas fa-chevron-right"></i>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
+          {% endif %}
+
+        {% else %}
+          <div class="text-center py-5">
+            <div class="mb-4">
+              <i class="fas fa-calendar-alt text-muted" style="font-size: 4rem;"></i>
+            </div>
+            <h5 class="text-muted mb-3">Nenhum aluguer encontrado</h5>
+            <p class="text-muted mb-4">Tente ajustar os filtros ou crie um novo aluguer para começar.</p>
+            <a href="{% url 'vehicle_rental:rental_create' %}" class="btn btn-success btn-lg">
+              <i class="fas fa-plus me-2"></i> Criar Primeiro Aluguer
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-submit form on select change
+    $('#status').change(function() {
+        $(this).closest('form').submit();
+    });
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock extra_js %}

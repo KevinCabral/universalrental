@@ -1,0 +1,70 @@
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views
+
+app_name = 'vehicle_rental'
+
+# DRF Router for API endpoints (Admin/Backoffice)
+router = DefaultRouter()
+router.register(r'vehicles', views.VehicleViewSet)
+router.register(r'customers', views.CustomerViewSet)
+router.register(r'rentals', views.RentalViewSet)
+router.register(r'expenses', views.ExpenseViewSet)
+router.register(r'maintenance', views.MaintenanceRecordViewSet)
+router.register(r'evaluations', views.RentalEvaluationViewSet)
+router.register(r'vehicle-photos', views.VehiclePhotoViewSet)
+
+# Customer-facing API Router
+customer_router = DefaultRouter()
+customer_router.register(r'register', views.CustomerRegistrationViewSet, basename='customer-register')
+customer_router.register(r'rentals', views.CustomerRentalViewSet, basename='customer-rentals')
+customer_router.register(r'evaluations', views.CustomerRentalEvaluationViewSet, basename='customer-evaluations')
+customer_router.register(r'vehicles', views.VehicleAvailabilityViewSet, basename='customer-vehicles')
+
+urlpatterns = [
+    # Dashboard and main views
+    path('', views.dashboard, name='dashboard'),
+    path('vehicles/', views.vehicle_list, name='vehicle_list'),
+    path('vehicles/create/', views.vehicle_create, name='vehicle_create'),
+    path('vehicles/<int:pk>/', views.vehicle_detail, name='vehicle_detail'),
+    path('vehicles/<int:pk>/edit/', views.vehicle_edit, name='vehicle_edit'),
+    path('customers/', views.customer_list, name='customer_list'),
+    path('customers/create/', views.customer_create, name='customer_create'),
+    path('customers/<int:pk>/', views.customer_detail, name='customer_detail'),
+    path('customers/<int:pk>/edit/', views.customer_edit, name='customer_edit'),
+    path('rentals/', views.rental_list, name='rental_list'),
+    path('rentals/<int:pk>/', views.rental_detail, name='rental_detail'),
+    path('rentals/create/', views.rental_create, name='rental_create'),
+    path('rentals/<int:pk>/edit/', views.rental_edit, name='rental_edit'),
+    path('rentals/<int:pk>/confirm/', views.rental_confirm, name='rental_confirm'),
+    path('rentals/<int:pk>/cancel/', views.rental_cancel, name='rental_cancel'),
+    path('rentals/<int:pk>/return/', views.rental_return, name='rental_return'),
+    path('rentals/<int:pk>/photos/', views.rental_photos, name='rental_photos'),
+    path('rentals/<int:pk>/invoice/', views.rental_invoice, name='rental_invoice'),
+    path('expenses/', views.expense_list, name='expense_list'),
+    path('expenses/export/', views.expense_export_invoice, name='expense_export_invoice'),
+    path('expenses/create/', views.expense_create, name='expense_create'),
+    path('expenses/<int:pk>/', views.expense_detail, name='expense_detail'),
+    path('expenses/<int:pk>/edit/', views.expense_edit, name='expense_edit'),
+    path('maintenance/', views.maintenance_list, name='maintenance_list'),
+    path('maintenance/create/', views.maintenance_create, name='maintenance_create'),
+    path('maintenance/<int:pk>/', views.maintenance_detail, name='maintenance_detail'),
+    path('maintenance/<int:pk>/edit/', views.maintenance_edit, name='maintenance_edit'),
+    
+    # Reports
+    path('reports/', views.reports_dashboard, name='reports_dashboard'),
+    path('reports/revenue/', views.revenue_report, name='revenue_report'),
+    path('reports/vehicle-utilization/', views.vehicle_utilization_report, name='vehicle_utilization_report'),
+    
+    # API endpoints (Admin/Backoffice)
+    path('api/', include(router.urls)),
+    
+    # Customer-facing API endpoints
+    path('api/customer/login/', views.customer_login, name='customer_login'),
+    path('api/customer/', include(customer_router.urls)),
+    
+    # AJAX endpoints
+    path('ajax/vehicle-availability/', views.check_vehicle_availability, name='check_vehicle_availability'),
+    path('ajax/rental-pricing/', views.calculate_rental_pricing, name='calculate_rental_pricing'),
+    path('api/create-brand/', views.api_create_brand, name='api_create_brand'),
+]

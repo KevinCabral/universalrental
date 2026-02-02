@@ -1,0 +1,331 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Fatura - Aluguer #{{ invoice_data.rental.id|stringformat:"05d" }}{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Fatura do Aluguer</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i data-feather="home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_list' %}">Alugueres</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:rental_detail' invoice_data.rental.pk %}">Aluguer #{{ invoice_data.rental.id }}</a></li>
+          <li class="breadcrumb-item active">Fatura</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Invoice Actions -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="d-flex justify-content-end">
+          <a href="{% url 'vehicle_rental:rental_invoice' invoice_data.rental.pk %}?format=pdf" 
+             class="btn btn-danger me-2">
+            <i data-feather="download"></i> Baixar PDF
+          </a>
+          <button onclick="window.print()" class="btn btn-secondary me-2">
+            <i data-feather="printer"></i> Imprimir
+          </button>
+          <a href="{% url 'vehicle_rental:rental_detail' invoice_data.rental.pk %}" 
+             class="btn btn-outline-primary">
+            <i data-feather="arrow-left"></i> Voltar
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invoice Content -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            
+            <!-- Invoice Header -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h2 class="text-primary">{{ company_info.name }}</h2>
+                <address class="mb-0">
+                  {{ company_info.address }}<br>
+                  {{ company_info.city }}<br>
+                  <strong>Telefone:</strong> {{ company_info.phone }}<br>
+                  <strong>Email:</strong> {{ company_info.email }}<br>
+                  <strong>NIF:</strong> {{ company_info.vat_number }}
+                </address>
+              </div>
+              <div class="col-md-6 text-end">
+                <h1 class="text-primary">FATURA</h1>
+                <div class="invoice-details mt-3">
+                  <table class="table table-borderless">
+                    <tr>
+                      <td class="text-end"><strong>Nº Fatura:</strong></td>
+                      <td>{{ invoice_data.invoice_number }}</td>
+                    </tr>
+                    <tr>
+                      <td class="text-end"><strong>Data Fatura:</strong></td>
+                      <td>{{ invoice_data.invoice_date|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                      <td class="text-end"><strong>Data Vencimento:</strong></td>
+                      <td>{{ invoice_data.due_date|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                      <td class="text-end"><strong>Aluguer Nº:</strong></td>
+                      <td>#{{ invoice_data.rental.id|stringformat:"05d" }}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <hr>
+
+            <!-- Customer Information -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h5>Faturar a:</h5>
+                <address>
+                  <strong>{{ invoice_data.rental.customer.first_name }} {{ invoice_data.rental.customer.last_name }}</strong><br>
+                  {% if invoice_data.rental.customer.address %}
+                    {{ invoice_data.rental.customer.address }}<br>
+                  {% endif %}
+                  <strong>Telefone:</strong> {{ invoice_data.rental.customer.phone_number }}<br>
+                  <strong>Email:</strong> {{ invoice_data.rental.customer.email }}<br>
+                  {% if invoice_data.rental.customer.id_number %}
+                    <strong>NIF/CC:</strong> {{ invoice_data.rental.customer.id_number }}
+                  {% endif %}
+                </address>
+              </div>
+              <div class="col-md-6">
+                <h5>Detalhes do Veículo:</h5>
+                <address>
+                  <strong>{{ invoice_data.rental.vehicle.brand.name }} {{ invoice_data.rental.vehicle.model }}</strong><br>
+                  <strong>Matrícula:</strong> {{ invoice_data.rental.vehicle.registration_number }}<br>
+                  <strong>Ano:</strong> {{ invoice_data.rental.vehicle.year }}<br>
+                  <strong>Cor:</strong> {{ invoice_data.rental.vehicle.color }}
+                </address>
+              </div>
+            </div>
+
+            <!-- Rental Period -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6>Período do Aluguer</h6>
+                    <div class="row">
+                      <div class="col-md-4">
+                        <strong>Data de Início:</strong><br>
+                        {{ invoice_data.rental.start_date|date:"d/m/Y H:i" }}
+                      </div>
+                      <div class="col-md-4">
+                        <strong>Data de Fim:</strong><br>
+                        {{ invoice_data.rental.end_date|date:"d/m/Y H:i" }}
+                      </div>
+                      <div class="col-md-4">
+                        <strong>Duração:</strong><br>
+                        {{ invoice_data.rental.get_rental_duration }} dia{% if invoice_data.rental.get_rental_duration != 1 %}s{% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invoice Items -->
+            <div class="row">
+              <div class="col-12">
+                <h5 class="mb-3">Itens da Fatura</h5>
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead class="table-primary">
+                      <tr>
+                        <th>Descrição</th>
+                        <th class="text-center">Quantidade</th>
+                        <th class="text-end">Preço Unitário</th>
+                        <th class="text-end">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Main rental charge -->
+                      <tr>
+                        <td>
+                          <strong>Aluguer de Veículo</strong><br>
+                          <small class="text-muted">{{ invoice_data.rental.vehicle.brand.name }} {{ invoice_data.rental.vehicle.model }} ({{ invoice_data.rental.vehicle.registration_number }})</small>
+                        </td>
+                        <td class="text-center">{{ invoice_data.rental.get_rental_duration }} dia{% if invoice_data.rental.get_rental_duration != 1 %}s{% endif %}</td>
+                        <td class="text-end">{{ invoice_data.rental.daily_rate|floatformat:0 }} ECV</td>
+                        <td class="text-end">{{ invoice_data.subtotal|floatformat:0 }} ECV</td>
+                      </tr>
+
+                      <!-- Security Deposit -->
+                      {% if invoice_data.rental.security_deposit %}
+                      <tr>
+                        <td>
+                          <strong>Depósito de Segurança</strong><br>
+                          <small class="text-muted">Valor reembolsável</small>
+                        </td>
+                        <td class="text-center">1</td>
+                        <td class="text-end">{{ invoice_data.rental.security_deposit|floatformat:0 }} ECV</td>
+                        <td class="text-end">{{ invoice_data.rental.security_deposit|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% endif %}
+
+                      <!-- Late Return Fee -->
+                      {% if invoice_data.rental.late_return_fee %}
+                      <tr class="table-warning">
+                        <td>
+                          <strong>Taxa de Atraso na Devolução</strong><br>
+                          <small class="text-muted">Devolução fora do prazo</small>
+                        </td>
+                        <td class="text-center">1</td>
+                        <td class="text-end">{{ invoice_data.rental.late_return_fee|floatformat:0 }} ECV</td>
+                        <td class="text-end">{{ invoice_data.rental.late_return_fee|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% endif %}
+
+                      <!-- Damage Fee -->
+                      {% if invoice_data.rental.damage_fee %}
+                      <tr class="table-danger">
+                        <td>
+                          <strong>Taxa de Danos</strong><br>
+                          <small class="text-muted">Danos no veículo</small>
+                        </td>
+                        <td class="text-center">1</td>
+                        <td class="text-end">{{ invoice_data.rental.damage_fee|floatformat:0 }} ECV</td>
+                        <td class="text-end">{{ invoice_data.rental.damage_fee|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% endif %}
+
+                      <!-- Related Expenses -->
+                      {% if invoice_data.expenses %}
+                        {% for expense in invoice_data.expenses %}
+                        <tr>
+                          <td>
+                            <strong>Despesa: {{ expense.description }}</strong><br>
+                            <small class="text-muted">{{ expense.category.name }}</small>
+                          </td>
+                          <td class="text-center">1</td>
+                          <td class="text-end">{{ expense.amount|floatformat:0 }} ECV</td>
+                          <td class="text-end">{{ expense.amount|floatformat:0 }} ECV</td>
+                        </tr>
+                        {% endfor %}
+                      {% endif %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Invoice Totals -->
+            <div class="row">
+              <div class="col-md-6 offset-md-6">
+                <div class="card">
+                  <div class="card-body">
+                    <table class="table table-borderless">
+                      <tr>
+                        <td><strong>Subtotal:</strong></td>
+                        <td class="text-end">{{ invoice_data.subtotal|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% if invoice_data.rental.security_deposit %}
+                      <tr>
+                        <td>Depósito de Segurança:</td>
+                        <td class="text-end">{{ invoice_data.rental.security_deposit|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% endif %}
+                      {% if invoice_data.total_fees %}
+                      <tr class="text-warning">
+                        <td>Taxas Adicionais:</td>
+                        <td class="text-end">{{ invoice_data.total_fees|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% endif %}
+                      {% if invoice_data.total_expenses %}
+                      <tr>
+                        <td>Despesas Relacionadas:</td>
+                        <td class="text-end">{{ invoice_data.total_expenses|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% endif %}
+                      {% if invoice_data.rental.commission_amount %}
+                      <tr class="text-info">
+                        <td>Comissão ({{ invoice_data.rental.commission_rate }}%):</td>
+                        <td class="text-end">{{ invoice_data.rental.commission_amount|floatformat:0 }} ECV</td>
+                      </tr>
+                      {% endif %}
+                      <tr class="table-success">
+                        <td><strong>TOTAL GERAL:</strong></td>
+                        <td class="text-end"><strong>{{ invoice_data.grand_total|floatformat:0 }} ECV</strong></td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Information -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6>Informações de Pagamento</h6>
+                    <p class="mb-0">
+                      <strong>Estado:</strong> 
+                      {% if invoice_data.rental.status == 'completed' %}
+                        <span class="badge bg-success">Concluído</span>
+                      {% elif invoice_data.rental.status == 'active' %}
+                        <span class="badge bg-warning text-dark">Ativo</span>
+                      {% else %}
+                        <span class="badge bg-info">{{ invoice_data.rental.get_status_display }}</span>
+                      {% endif %}
+                    </p>
+                    <p class="mt-2 mb-0">
+                      <small class="text-muted">
+                        Esta fatura foi gerada automaticamente em {{ invoice_data.invoice_date|date:"d/m/Y" }}.
+                        Para questões sobre esta fatura, contacte-nos através do telefone {{ company_info.phone }} ou email {{ company_info.email }}.
+                      </small>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    feather.replace();
+});
+
+// Print styles
+window.addEventListener('beforeprint', function() {
+    // Hide navigation and other elements when printing
+    document.querySelector('.pc-sidebar').style.display = 'none';
+    document.querySelector('.pc-header').style.display = 'none';
+    document.querySelector('.breadcrumb').style.display = 'none';
+    document.querySelector('.btn').style.display = 'none';
+});
+
+window.addEventListener('afterprint', function() {
+    // Show elements back after printing
+    document.querySelector('.pc-sidebar').style.display = 'block';
+    document.querySelector('.pc-header').style.display = 'block';
+    document.querySelector('.breadcrumb').style.display = 'block';
+    document.querySelector('.btn').style.display = 'inline-block';
+});
+</script>
+{% endblock extra_js %}

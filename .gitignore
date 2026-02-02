@@ -1,0 +1,48 @@
+# Python/Django
+*.pyc
+*.py[cod]
+__pycache__/
+*.egg*
+*.log
+
+# Database
+*.sqlite3
+# *.sqlite*  # Commented out in original
+
+# Environment
+.env
+.env.*
+env
+env__
+/staticfiles/
+
+# Virtual environments
+venv_sga/
+
+#src
+#*.sqlite*
+
+#.env
+yarn.lock
+
+# Static files
+/staticfiles/
+/media/
+
+# IDEs
+.vscode/
+.idea/
+
+# System
+.DS_Store
+
+# Documentation
+/docs/_build/
+
+# Docker
+*.pid
+*.sock
+db.sqlite3
+*.sqlite3
+.env
+config.yaml
