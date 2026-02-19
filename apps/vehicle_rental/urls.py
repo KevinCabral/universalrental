@@ -8,6 +8,7 @@ app_name = 'vehicle_rental'
 router = DefaultRouter()
 router.register(r'vehicles', views.VehicleViewSet)
 router.register(r'customers', views.CustomerViewSet)
+router.register(r'vehicle-brands', views.VehicleBrandViewSet)
 router.register(r'rentals', views.RentalViewSet)
 router.register(r'expenses', views.ExpenseViewSet)
 router.register(r'maintenance', views.MaintenanceRecordViewSet)
@@ -20,6 +21,7 @@ customer_router.register(r'register', views.CustomerRegistrationViewSet, basenam
 customer_router.register(r'rentals', views.CustomerRentalViewSet, basename='customer-rentals')
 customer_router.register(r'evaluations', views.CustomerRentalEvaluationViewSet, basename='customer-evaluations')
 customer_router.register(r'vehicles', views.VehicleAvailabilityViewSet, basename='customer-vehicles')
+customer_router.register(r'vehicle-brands', views.VehicleBrandViewSet, basename='customer-vehicle-brands')
 
 urlpatterns = [
     # Dashboard and main views
@@ -61,6 +63,9 @@ urlpatterns = [
     
     # Customer-facing API endpoints
     path('api/customer/login/', views.customer_login, name='customer_login'),
+    path('api/customer/change-password/', views.change_password, name='customer_change_password'),
+    path('api/customer/request-password-reset/', views.request_password_reset, name='request_password_reset'),
+    path('api/customer/reset-password/', views.reset_password, name='reset_password'),
     path('api/customer/', include(customer_router.urls)),
     
     # AJAX endpoints

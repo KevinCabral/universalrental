@@ -34,11 +34,12 @@ class Vehicle(models.Model):
     """Enhanced Vehicle model with proper relationships and validation"""
     
     FUEL_CHOICES = [
-        ('petrol', _('Gasolina')),
+        ('petrol', _('Gasóleo')),
         ('diesel', _('Diesel')),
         ('electric', _('Eléctrico')),
         ('hybrid', _('Híbrido')),
         ('lpg', _('GPL')),
+        ('gas', _('Gasolina')),
     ]
     
     GEARBOX_CHOICES = [
@@ -191,20 +192,33 @@ class Customer(models.Model):
     phone_number = models.CharField(max_length=20)
     
     # Address
-    address_line_1 = models.CharField(max_length=200)
+    address_line_1 = models.CharField(max_length=200, blank=True, null=True)
     address_line_2 = models.CharField(max_length=200, blank=True, null=True)
-    city = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
-    country = models.CharField(max_length=100)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    postal_code = models.CharField(max_length=20, blank=True, null=True)
+    country = models.CharField(max_length=100, default='Portugal')
     
     # Identification
     id_number = models.CharField(max_length=50, unique=True, help_text=_("National ID or Passport Number"))
     driving_license_number = models.CharField(max_length=50, unique=True)
-    license_expiry_date = models.DateField()
+    license_expiry_date = models.DateField(null=True, blank=True)
     
     # Customer Status
     is_blacklisted = models.BooleanField(default=False)
     blacklist_reason = models.TextField(blank=True, null=True)
+    
+    # OTP for Password Recovery
+    otp = models.CharField(
+        max_length=6,
+        null=True,
+        blank=True,
+        help_text=_("One-time password for password recovery")
+    )
+    otp_created_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_("Timestamp when OTP was created")
+    )
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -234,6 +248,20 @@ class Customer(models.Model):
         if self.license_expiry_date < timezone.now().date():
             return False
         return True
+    
+    def is_otp_valid(self, expiry_minutes=15):
+        """Check if OTP is still valid (not expired)"""
+        if not self.otp or not self.otp_created_at:
+            return False
+        
+        expiry_time = self.otp_created_at + timezone.timedelta(minutes=expiry_minutes)
+        return timezone.now() <= expiry_time
+    
+    def clear_otp(self):
+        """Clear the OTP after successful use or expiry"""
+        self.otp = None
+        self.otp_created_at = None
+        self.save()
 
 
 class Rental(models.Model):
@@ -285,6 +313,16 @@ class Rental(models.Model):
     security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     late_return_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     damage_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    
+    # Additional requirements
+    driver = models.BooleanField(
+        default=False,
+        help_text=_("Necessita de motorista")
+    )
+    car_seat = models.BooleanField(
+        default=False,
+        help_text=_("Necessita de assento de criança")
+    )
     
     # Total
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -836,3 +874,6 @@ class VehiclePhoto(models.Model):
                 return f"{size:.1f} {unit}"
             size /= 1024.0
         return f"{size:.1f} TB"
+
+
+

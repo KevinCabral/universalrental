@@ -257,6 +257,54 @@
                 </div>
               </div>
 
+              <!-- Additional Requirements Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="settings" class="me-2"></i>
+                    Requisitos Adicionais
+                  </h6>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.driver }}
+                      <label class="form-check-label" for="{{ form.driver.id_for_label }}">
+                        Necessita de Motorista
+                      </label>
+                    </div>
+                    {% if form.driver.errors %}
+                      <div class="text-danger">
+                        {% for error in form.driver.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Marque se o cliente necessita de um motorista profissional</small>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.car_seat }}
+                      <label class="form-check-label" for="{{ form.car_seat.id_for_label }}">
+                        Necessita de Assento de Criança
+                      </label>
+                    </div>
+                    {% if form.car_seat.errors %}
+                      <div class="text-danger">
+                        {% for error in form.car_seat.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Marque se é necessário um assento de criança</small>
+                  </div>
+                </div>
+              </div>
+
               <!-- Notes Section -->
               <div class="row">
                 <div class="col-12">

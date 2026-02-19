@@ -120,11 +120,16 @@ class CustomerForm(forms.ModelForm):
         self.fields['email'].required = False
         self.fields['postal_code'].required = False
         self.fields['id_number'].required = False
+        self.fields['license_expiry_date'].required = False
     
     def clean_email(self):
         email = self.cleaned_data['email']
-        if email and Customer.objects.filter(email=email).exclude(pk=self.instance.pk if self.instance else None).exists():
-            raise ValidationError('A customer with this email already exists.')
+        if email:
+            existing_customer = Customer.objects.filter(email=email).exclude(pk=self.instance.pk if self.instance else None).first()
+            if existing_customer:
+                # Only raise error if customer already has a user account
+                if existing_customer.user is not None:
+                    raise ValidationError('Customer with this email already exists.')
         return email
     
     def clean_id_number(self):
@@ -135,8 +140,12 @@ class CustomerForm(forms.ModelForm):
     
     def clean_driving_license_number(self):
         license_number = self.cleaned_data['driving_license_number']
-        if Customer.objects.filter(driving_license_number=license_number).exclude(pk=self.instance.pk if self.instance else None).exists():
-            raise ValidationError('A customer with this driving license number already exists.')
+        if license_number:
+            existing_customer = Customer.objects.filter(driving_license_number=license_number).exclude(pk=self.instance.pk if self.instance else None).first()
+            if existing_customer:
+                # Only raise error if customer already has a user account
+                if existing_customer.user is not None:
+                    raise ValidationError('Customer with this driving license number already exists.')
         return license_number
     
     def clean_license_expiry_date(self):
@@ -152,7 +161,7 @@ class RentalForm(forms.ModelForm):
         fields = [
             'vehicle', 'customer', 'start_date', 'end_date',
             'daily_rate', 'commission_percent', 'commission_amount', 'insurance_fee', 'security_deposit',
-            'mileage_start', 'fuel_level_start', 'notes'
+            'mileage_start', 'fuel_level_start', 'driver', 'car_seat', 'notes'
         ]
         labels = {
             'vehicle': 'Veículo',
@@ -166,6 +175,8 @@ class RentalForm(forms.ModelForm):
             'security_deposit': 'Depósito de Segurança',
             'mileage_start': 'Quilometragem Inicial',
             'fuel_level_start': 'Nível de Combustível Inicial',
+            'driver': 'Necessita de Motorista',
+            'car_seat': 'Necessita de Assento de Criança',
             'notes': 'Notas'
         }
         widgets = {
@@ -178,6 +189,8 @@ class RentalForm(forms.ModelForm):
             'security_deposit': forms.NumberInput(attrs={'step': 'any', 'min': '0', 'class': 'form-control'}),
             'mileage_start': forms.NumberInput(attrs={'min': '0', 'class': 'form-control'}),
             'fuel_level_start': forms.Select(attrs={'class': 'form-control'}),
+            'driver': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'car_seat': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
             'customer': forms.Select(attrs={'class': 'form-control'}),

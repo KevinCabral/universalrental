@@ -290,6 +290,37 @@
                 </div>
               </div>
             </div>
+
+            <hr class="my-4">
+            
+            <!-- Additional Requirements -->
+            <div class="row">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-cogs me-2"></i>Requisitos Adicionais
+                </h6>
+                <div class="row mb-2">
+                  <div class="col-6"><strong><i class="fas fa-user-tie me-1 text-muted"></i>Motorista:</strong></div>
+                  <div class="col-6">
+                    {% if rental.driver %}
+                      <span class="badge bg-success">Necessário</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Não necessário</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="row mb-2">
+                  <div class="col-6"><strong><i class="fas fa-baby me-1 text-muted"></i>Assento de Criança:</strong></div>
+                  <div class="col-6">
+                    {% if rental.car_seat %}
+                      <span class="badge bg-success">Necessário</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Não necessário</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
             
             {% if rental.notes %}
             <hr class="my-4">

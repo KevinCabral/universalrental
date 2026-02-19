@@ -37,9 +37,11 @@ class VehicleSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source='brand.name', read_only=True)
     is_available = serializers.BooleanField(read_only=True)
     current_rental = serializers.SerializerMethodField()
+    active_rentals = serializers.SerializerMethodField()
     additional_photos = VehiclePhotoSerializer(many=True, read_only=True)
     photos_count = serializers.SerializerMethodField()
     primary_photo = serializers.SerializerMethodField()
+    stats = serializers.SerializerMethodField()
     
     class Meta:
         model = Vehicle
@@ -48,11 +50,11 @@ class VehicleSerializer(serializers.ModelSerializer):
             'registration_number', 'color', 'photo', 'engine_size', 'fuel_type',
             'gearbox_type', 'panoramic_roof', 'air_conditioning', 'number_of_seats',
             'mileage', 'purchase_price', 'date_of_purchase', 'daily_rate',
-            'status', 'is_active', 'is_available', 'current_rental',
-            'additional_photos', 'photos_count', 'primary_photo',
+            'status', 'is_active', 'is_available', 'current_rental', 'active_rentals',
+            'additional_photos', 'photos_count', 'primary_photo', 'stats',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'created_by', 'additional_photos', 'photos_count', 'primary_photo']
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'additional_photos', 'photos_count', 'primary_photo', 'stats']
     
     def get_current_rental(self, obj):
         current_rental = obj.get_current_rental()
@@ -65,6 +67,30 @@ class VehicleSerializer(serializers.ModelSerializer):
             }
         return None
     
+    def get_active_rentals(self, obj):
+        """Get list of rentals where end_date >= today"""
+        from django.utils import timezone
+        today = timezone.now().date()
+        
+        active_rentals = obj.rentals.filter(
+            end_date__date__gte=today
+        ).select_related('customer').order_by('start_date')
+        
+        return [
+            {
+                #'id': rental.id,
+                #'customer': rental.customer.full_name,
+                #'customer_email': rental.customer.email,
+                'start_date': rental.start_date,
+                'end_date': rental.end_date,
+                'status': rental.status,
+                'status_display': rental.get_status_display(),
+                #'total_amount': rental.total_amount,
+                #'daily_rate': rental.daily_rate,
+            }
+            for rental in active_rentals
+        ]
+    
     def get_photos_count(self, obj):
         """Get total number of additional photos"""
         return obj.additional_photos.count()
@@ -76,12 +102,60 @@ class VehicleSerializer(serializers.ModelSerializer):
             return VehiclePhotoSerializer(primary_photo, context=self.context).data
         return None
 
+    def get_stats(self, obj):
+        """Get evaluation statistics for the vehicle"""
+        from django.db.models import Avg
+        
+        # Get all evaluations for this vehicle through rentals
+        evaluations = RentalEvaluation.objects.filter(
+            rental__vehicle=obj
+        ).select_related('rental')
+        
+        total_evaluations = evaluations.count()
+        
+        if total_evaluations > 0:
+            # Calculate average ratings
+            avg_ratings = evaluations.aggregate(
+                overall=Avg('overall_rating'),
+                vehicle_condition=Avg('vehicle_condition_rating'),
+                service_quality=Avg('service_quality_rating'),
+                value_for_money=Avg('value_for_money_rating')
+            )
+            
+            recommendations = evaluations.filter(would_recommend=True).count()
+            issues_count = evaluations.filter(had_issues=True).count()
+            
+            stats = {
+                'total_evaluations': total_evaluations,
+                'average_overall_rating': round(avg_ratings['overall'] or 0, 2),
+                'average_vehicle_condition': round(avg_ratings['vehicle_condition'] or 0, 2),
+                'average_service_quality': round(avg_ratings['service_quality'] or 0, 2),
+                'average_value_for_money': round(avg_ratings['value_for_money'] or 0, 2),
+                'recommendation_percentage': round((recommendations / total_evaluations) * 100, 2) if total_evaluations > 0 else 0,
+                'issues_percentage': round((issues_count / total_evaluations) * 100, 2) if total_evaluations > 0 else 0,
+                'total_rentals_evaluated': total_evaluations
+            }
+        else:
+            stats = {
+                'total_evaluations': 0,
+                'average_overall_rating': 0,
+                'average_vehicle_condition': 0,
+                'average_service_quality': 0,
+                'average_value_for_money': 0,
+                'recommendation_percentage': 0,
+                'issues_percentage': 0,
+                'total_rentals_evaluated': 0
+            }
+        
+        return stats
+
 
 class CustomerSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     can_rent = serializers.BooleanField(read_only=True)
     rental_count = serializers.SerializerMethodField()
-    
+    license_expiry_date = serializers.DateField(required=False)
+
     class Meta:
         model = Customer
         fields = [
@@ -97,8 +171,21 @@ class CustomerSerializer(serializers.ModelSerializer):
         return obj.rentals.count()
     
     def validate_email(self, value):
-        if Customer.objects.filter(email=value).exclude(pk=self.instance.pk if self.instance else None).exists():
-            raise serializers.ValidationError("A customer with this email already exists.")
+        if value:
+            existing_customer = Customer.objects.filter(email=value).exclude(pk=self.instance.pk if self.instance else None).first()
+            if existing_customer:
+                # Only raise error if customer already has a user account
+                if existing_customer.user is not None:
+                    raise serializers.ValidationError("Customer with this email already exists.")
+        return value
+    
+    def validate_driving_license_number(self, value):
+        if value:
+            existing_customer = Customer.objects.filter(driving_license_number=value).exclude(pk=self.instance.pk if self.instance else None).first()
+            if existing_customer:
+                # Only raise error if customer already has a user account
+                if existing_customer.user is not None:
+                    raise serializers.ValidationError("Customer with this driving license number already exists.")
         return value
 
 
@@ -116,8 +203,8 @@ class RentalSerializer(serializers.ModelSerializer):
             'number_of_days', 'subtotal', 'commission_percent', 'commission_amount',
             'insurance_fee', 'security_deposit', 'late_return_fee', 'damage_fee',
             'total_amount', 'amount_paid', 'mileage_start', 'mileage_end',
-            'fuel_level_start', 'fuel_level_end', 'status', 'notes',
-            'is_overdue', 'days_overdue', 'created_at', 'updated_at'
+            'fuel_level_start', 'fuel_level_end', 'driver', 'car_seat',
+            'status', 'notes', 'is_overdue', 'days_overdue', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'number_of_days', 'subtotal', 'commission_amount', 'total_amount',
@@ -136,7 +223,7 @@ class RentalSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['start_date'] >= data['end_date']:
             raise serializers.ValidationError("End date must be after start date.")
-        
+
         # Check vehicle availability
         vehicle = data['vehicle']
         start_date = data['start_date']
@@ -144,7 +231,7 @@ class RentalSerializer(serializers.ModelSerializer):
         
         overlapping_rentals = Rental.objects.filter(
             vehicle=vehicle,
-            status__in=['confirmed', 'active'],
+            status__in=['confirmed', 'active', 'pending'],  # Consider pending rentals as well to prevent double booking
             start_date__lt=end_date,
             end_date__gt=start_date
         )
@@ -296,20 +383,80 @@ class CustomerRegistrationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Remove the automatic unique validators for email and driving_license_number
+        # so we can handle uniqueness validation ourselves
+        print("=== Removing unique validators ===")
+        
+        # Remove unique validator from email field
+        if 'email' in self.fields:
+            email_field = self.fields['email']
+            email_field.validators = [v for v in email_field.validators if not hasattr(v, 'queryset')]
+
+        # Remove unique validator from driving_license_number field
+        if 'driving_license_number' in self.fields:
+            license_field = self.fields['driving_license_number']
+            license_field.validators = [v for v in license_field.validators if not hasattr(v, 'queryset')]
+
+    def validate_email(self, value):
+
+        existing_customer = Customer.objects.filter(email=value).first()
+
+        if existing_customer:
+
+            # Only raise error if customer already has a user account
+            if existing_customer.user is not None:
+                #print("Email validation failed - customer has active account")
+                raise serializers.ValidationError("Customer with this email already exists.")
+
+        return value
+    
+    def validate_driving_license_number(self, value):
+        existing_customer = Customer.objects.filter(driving_license_number=value).first()
+
+        if existing_customer:
+            # Only raise error if customer already has a user account
+            if existing_customer.user is not None:
+                #print("License validation failed - customer has active account")
+                raise serializers.ValidationError("Customer with this driving license number already exists.")
+        return value
+    
     def validate(self, data):
         # Check password match
         if data.get('password') != data.get('password_confirm'):
             raise serializers.ValidationError({"password": "Passwords do not match."})
         
-        # Check if email already exists
-        if Customer.objects.filter(email=data.get('email')).exists():
-            raise serializers.ValidationError({"email": "A customer with this email already exists."})
+        errors = {}
+        
+        # Check if customer exists with this email
+        existing_customer_email = Customer.objects.filter(email=data.get('email')).first()
+        if existing_customer_email:
+            # If customer exists but has no user associated, we'll allow registration
+            # to create the user and link it to the existing customer
+            if existing_customer_email.user is not None:
+                errors["email"] = "Customer with this email already exists."
+        
+        # Check if customer exists with this driving license number
+        existing_customer_license = Customer.objects.filter(driving_license_number=data.get('driving_license_number')).first()
+        if existing_customer_license:
+            # If customer exists but has no user associated, we'll allow registration
+            # to create the user and link it to the existing customer
+            if existing_customer_license.user is not None:
+                errors["driving_license_number"] = "Customer with this driving license number already exists."
+            # Check if the existing customers with email and license are different records
+            elif existing_customer_email and existing_customer_email.id != existing_customer_license.id:
+                errors["driving_license_number"] = "This driving license number belongs to a different customer than the email provided."
         
         # Check if driving license is expired
-        from django.utils import timezone
-        if data.get('license_expiry_date') and data.get('license_expiry_date') < timezone.now().date():
-            raise serializers.ValidationError({"license_expiry_date": "Driving license has expired."})
+        #from django.utils import timezone
+        #if data.get('license_expiry_date') and data.get('license_expiry_date') < timezone.now().date():
+        #    errors["license_expiry_date"] = "Driving license has expired."
         
+        if errors:
+            raise serializers.ValidationError(errors)
+
         return data
     
     def create(self, validated_data):
@@ -319,23 +466,55 @@ class CustomerRegistrationSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         validated_data.pop('password_confirm')
         
-        # Create Django user
-        user = User.objects.create_user(
-            username=validated_data['email'],
-            email=validated_data['email'],
-            password=password,
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name']
-        )
+        # Check if customer already exists with this email or driving license
+        existing_customer = Customer.objects.filter(
+            email=validated_data['email']
+        ).first()
         
-        # Add user to customer group
-        customer_group, created = Group.objects.get_or_create(name='customer')
-        user.groups.add(customer_group)
+        if not existing_customer:
+            existing_customer = Customer.objects.filter(
+                driving_license_number=validated_data['driving_license_number']
+            ).first()
         
-        # Create customer profile
-        customer = Customer.objects.create(user=user, **validated_data)
-        
-        return customer
+        if existing_customer and existing_customer.user is None:
+            # Customer exists but has no user - create user and update customer
+            user = User.objects.create_user(
+                username=validated_data['email'],
+                email=validated_data['email'],
+                password=password,
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name']
+            )
+            
+            # Add user to customer group
+            customer_group, created = Group.objects.get_or_create(name='Customer')
+            user.groups.add(customer_group)
+            
+            # Update existing customer with new data and link to user
+            for key, value in validated_data.items():
+                setattr(existing_customer, key, value)
+            existing_customer.user = user
+            existing_customer.save()
+            
+            return existing_customer
+        else:
+            # Create new customer and user
+            user = User.objects.create_user(
+                username=validated_data['email'],
+                email=validated_data['email'],
+                password=password,
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name']
+            )
+            
+            # Add user to customer group
+            customer_group, created = Group.objects.get_or_create(name='Customer')
+            user.groups.add(customer_group)
+            
+            # Create customer profile
+            customer = Customer.objects.create(user=user, **validated_data)
+            
+            return customer
 
 
 class CustomerDetailSerializer(serializers.ModelSerializer):
@@ -372,8 +551,8 @@ class CustomerRentalSerializer(serializers.ModelSerializer):
         model = Rental
         fields = [
             'id', 'vehicle_info', 'start_date', 'end_date', 'days_duration',
-            'total_amount', 'status', 'status_display', 'notes',
-            'evaluation', 'created_at'
+            'total_amount', 'driver', 'car_seat', 'status', 'status_display',
+            'notes', 'evaluation', 'created_at'
         ]
         read_only_fields = ['id', 'total_amount', 'created_at']
     
@@ -384,7 +563,8 @@ class CustomerRentalSerializer(serializers.ModelSerializer):
             'model': obj.vehicle.model,
             'year': obj.vehicle.year,
             'registration_number': obj.vehicle.registration_number,
-            'photo': obj.vehicle.photo.url if obj.vehicle.photo else None
+            'photo': obj.vehicle.photo.url if obj.vehicle.photo else None,
+            'primary_photo': self.get_primary_photo(obj.vehicle)['image'] if self.get_primary_photo(obj.vehicle) else None
         }
     
     def get_evaluation(self, obj):
@@ -403,10 +583,17 @@ class CustomerRentalSerializer(serializers.ModelSerializer):
         except Exception:
             pass
         return None
-    
+
     def get_days_duration(self, obj):
         if obj.start_date and obj.end_date:
             return (obj.end_date - obj.start_date).days
+        return None
+
+    def get_primary_photo(self, obj):
+        """Get the primary photo if exists"""
+        primary_photo = obj.additional_photos.filter(is_primary=True).first()
+        if primary_photo:
+            return VehiclePhotoSerializer(primary_photo, context=self.context).data
         return None
 
 
@@ -414,6 +601,8 @@ class CustomerVehicleSerializer(serializers.ModelSerializer):
     """Simplified vehicle serializer for customer-facing API to avoid performance issues"""
     brand_name = serializers.CharField(source='brand.name', read_only=True)
     photos_count = serializers.SerializerMethodField()
+    active_rentals = serializers.SerializerMethodField()
+    basic_stats = serializers.SerializerMethodField()
     
     class Meta:
         model = Vehicle
@@ -421,7 +610,8 @@ class CustomerVehicleSerializer(serializers.ModelSerializer):
             'id', 'brand', 'brand_name', 'model', 'year', 'description',
             'registration_number', 'color', 'photo', 'fuel_type',
             'gearbox_type', 'panoramic_roof', 'air_conditioning', 'number_of_seats',
-            'daily_rate', 'status', 'is_available', 'photos_count'
+            'daily_rate', 'status', 'is_available', 'photos_count', 'active_rentals',
+            'basic_stats'
         ]
     
     def get_photos_count(self, obj):
@@ -430,3 +620,93 @@ class CustomerVehicleSerializer(serializers.ModelSerializer):
             return obj.additional_photos.count()
         except:
             return 0
+    
+    def get_active_rentals(self, obj):
+        """Get list of rentals where end_date >= today"""
+        from django.utils import timezone
+        today = timezone.now().date()
+        
+        active_rentals = obj.rentals.filter(
+            end_date__date__gte=today
+        ).select_related('customer').order_by('start_date')
+        
+        return [
+            {
+                'id': rental.id,
+                'customer': rental.customer.full_name,
+                'start_date': rental.start_date,
+                'end_date': rental.end_date,
+                'status': rental.status,
+                'status_display': rental.get_status_display(),
+            }
+            for rental in active_rentals
+        ]
+    
+    def get_basic_stats(self, obj):
+        """Get basic statistics for customer view (performance optimized)"""
+        from django.db.models import Avg, Count
+        
+        # Use efficient queries to get basic stats
+        evaluations = obj.rentals.filter(evaluation__isnull=False).select_related('evaluation')
+        
+        basic_stats = {
+            'total_rentals': obj.rentals.count(),
+            'total_evaluations': evaluations.count(),
+            'average_rating': 0,
+            'recommendation_percentage': 0
+        }
+        
+        if evaluations.exists():
+            evaluations_list = [rental.evaluation for rental in evaluations]
+            total_evals = len(evaluations_list)
+            
+            # Calculate average rating
+            avg_rating = sum(e.overall_rating for e in evaluations_list) / total_evals
+            basic_stats['average_rating'] = round(avg_rating, 1)
+            
+            # Calculate recommendation percentage
+            recommendations = sum(1 for e in evaluations_list if e.would_recommend)
+            basic_stats['recommendation_percentage'] = round(
+                (recommendations / total_evals) * 100, 0
+            )
+        
+        return basic_stats
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Serializer for changing customer password"""
+    customer_id = serializers.IntegerField()
+    current_password = serializers.CharField(min_length=1, style={'input_type': 'password'})
+    new_password = serializers.CharField(min_length=8, style={'input_type': 'password'})
+    confirm_password = serializers.CharField(min_length=1, style={'input_type': 'password'})
+    
+    def validate(self, data):
+        """Validate the password change data"""
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({
+                "confirm_password": "New password and confirmation do not match"
+            })
+        
+        # Check if customer exists
+        try:
+            customer = Customer.objects.get(id=data['customer_id'])
+        except Customer.DoesNotExist:
+            raise serializers.ValidationError({
+                "customer_id": "Customer not found"
+            })
+        
+        # Check if customer has a user account
+        if not customer.user:
+            raise serializers.ValidationError({
+                "customer_id": "Customer does not have a user account"
+            })
+        
+        # Verify current password
+        if not customer.user.check_password(data['current_password']):
+            raise serializers.ValidationError({
+                "current_password": "Current password is incorrect"
+            })
+        
+        # Store customer in validated_data for use in the view
+        data['customer'] = customer
+        return data

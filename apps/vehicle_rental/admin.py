@@ -127,7 +127,8 @@ class RentalAdmin(admin.ModelAdmin):
         'status', 'total_amount', 'days_remaining'
     ]
     list_filter = [
-        'status', 'start_date', 'end_date', 'vehicle__brand'
+        'status', 'start_date', 'end_date', 'vehicle__brand',
+        'driver', 'car_seat'
     ]
     search_fields = [
         'customer__first_name', 'customer__last_name',
@@ -161,6 +162,9 @@ class RentalAdmin(admin.ModelAdmin):
                 'mileage_start', 'mileage_end',
                 'fuel_level_start', 'fuel_level_end'
             )
+        }),
+        ('Additional Requirements', {
+            'fields': ('driver', 'car_seat')
         }),
         ('Status & Notes', {
             'fields': ('status', 'notes')
