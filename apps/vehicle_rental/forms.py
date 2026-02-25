@@ -1,7 +1,10 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .models import Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory, MaintenanceRecord, RentalPhoto
+from .models import (
+    Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory, 
+    MaintenanceRecord, RentalPhoto, DeliveryLocation
+)
 
 
 class VehicleForm(forms.ModelForm):
@@ -90,7 +93,7 @@ class CustomerForm(forms.ModelForm):
         fields = [
             'first_name', 'last_name', 'email', 'phone_number',
             'address_line_1', 'address_line_2', 'city', 'postal_code', 'country',
-            'id_number', 'driving_license_number', 'license_expiry_date'
+            'id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date'
         ]
         labels = {
             'first_name': 'Primeiro Nome',
@@ -104,9 +107,11 @@ class CustomerForm(forms.ModelForm):
             'country': 'País',
             'id_number': 'Número de Identificação',
             'driving_license_number': 'Número da Carta de Condução',
+            'license_issue_date': 'Data de Emissão da Carta',
             'license_expiry_date': 'Data de Validade da Carta'
         }
         widgets = {
+            'license_issue_date': forms.DateInput(attrs={'type': 'date'}),
             'license_expiry_date': forms.DateInput(attrs={'type': 'date'}),
             'email': forms.EmailInput(),
             'phone_number': forms.TextInput(attrs={'placeholder': '+260'}),
@@ -120,6 +125,7 @@ class CustomerForm(forms.ModelForm):
         self.fields['email'].required = False
         self.fields['postal_code'].required = False
         self.fields['id_number'].required = False
+        self.fields['license_issue_date'].required = False
         self.fields['license_expiry_date'].required = False
     
     def clean_email(self):
@@ -148,20 +154,64 @@ class CustomerForm(forms.ModelForm):
                     raise ValidationError('Customer with this driving license number already exists.')
         return license_number
     
+    def clean_license_issue_date(self):
+        issue_date = self.cleaned_data.get('license_issue_date')
+        if issue_date and issue_date > timezone.now().date():
+            raise ValidationError('A data de emissão da carta não pode ser no futuro.')
+        return issue_date
+    
     def clean_license_expiry_date(self):
-        expiry_date = self.cleaned_data['license_expiry_date']
-        if expiry_date <= timezone.now().date():
+        expiry_date = self.cleaned_data.get('license_expiry_date')
+        issue_date = self.cleaned_data.get('license_issue_date')
+        
+        if expiry_date and expiry_date <= timezone.now().date():
             raise ValidationError('License expiry date must be in the future.')
+        
+        if issue_date and expiry_date and expiry_date <= issue_date:
+            raise ValidationError('A data de validade deve ser posterior à data de emissão.')
+            
         return expiry_date
 
 
 class RentalForm(forms.ModelForm):
+    # Campo calculado para mostrar o total estimado
+    total_estimate = forms.DecimalField(
+        required=False,
+        label='Total Estimado (ECV)',
+        widget=forms.NumberInput(attrs={'readonly': True, 'class': 'form-control', 'style': 'background-color: #f8f9fa;'}),
+        help_text='Total calculado automaticamente baseado na seleção de serviços'
+    )
+    
+    # Campos para locais de entrega/devolução
+    pickup_location_choice = forms.ModelChoiceField(
+        queryset=DeliveryLocation.objects.filter(
+            is_active=True,
+            location_type__in=['pickup', 'both']
+        ).order_by('name'),
+        required=False,
+        label='Local de Entrega (Predefinido)',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Selecione um local predefinido ou digite um personalizado abaixo'
+    )
+    
+    return_location_choice = forms.ModelChoiceField(
+        queryset=DeliveryLocation.objects.filter(
+            is_active=True,
+            location_type__in=['return', 'both']
+        ).order_by('name'),
+        required=False,
+        label='Local de Devolução (Predefinido)',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Selecione um local predefinido ou digite um personalizado abaixo'
+    )
+    
     class Meta:
         model = Rental
         fields = [
             'vehicle', 'customer', 'start_date', 'end_date',
             'daily_rate', 'commission_percent', 'commission_amount', 'insurance_fee', 'security_deposit',
-            'mileage_start', 'fuel_level_start', 'driver', 'car_seat', 'notes'
+            'mileage_start', 'fuel_level_start', 'driver', 'car_seat', 
+            'pickup_location', 'return_location', 'notes'
         ]
         labels = {
             'vehicle': 'Veículo',
@@ -175,8 +225,10 @@ class RentalForm(forms.ModelForm):
             'security_deposit': 'Depósito de Segurança',
             'mileage_start': 'Quilometragem Inicial',
             'fuel_level_start': 'Nível de Combustível Inicial',
-            'driver': 'Necessita de Motorista',
-            'car_seat': 'Necessita de Assento de Criança',
+            'driver': 'Necessita de Motorista (+3.000 ECV/dia)',
+            'car_seat': 'Necessita de Assento de Criança (+500 ECV/dia)',
+            'pickup_location': 'Local de Entrega',
+            'return_location': 'Local de Devolução',
             'notes': 'Notas'
         }
         widgets = {
@@ -189,8 +241,10 @@ class RentalForm(forms.ModelForm):
             'security_deposit': forms.NumberInput(attrs={'step': 'any', 'min': '0', 'class': 'form-control'}),
             'mileage_start': forms.NumberInput(attrs={'min': '0', 'class': 'form-control'}),
             'fuel_level_start': forms.Select(attrs={'class': 'form-control'}),
-            'driver': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'car_seat': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'driver': forms.CheckboxInput(attrs={'class': 'form-check-input', 'data-driver-fee': '3000'}),
+            'car_seat': forms.CheckboxInput(attrs={'class': 'form-check-input', 'data-seat-fee': '500'}),
+            'pickup_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Aeroporto Amílcar Cabral, Hotel, Endereço... (ou deixe vazio se usar predefinido)'}),
+            'return_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Aeroporto Amílcar Cabral, Hotel, Endereço... (ou deixe vazio se usar predefinido)'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'vehicle': forms.Select(attrs={'class': 'form-control'}),
             'customer': forms.Select(attrs={'class': 'form-control'}),
@@ -320,6 +374,10 @@ class RentalForm(forms.ModelForm):
             duration = rental.end_date - rental.start_date
             rental.number_of_days = max(1, duration.days)
             
+            # Calculate additional service fees
+            rental.driver_fee = 3000 * rental.number_of_days if rental.driver else 0
+            rental.car_seat_fee = 500 * rental.number_of_days if rental.car_seat else 0
+            
             # Calculate subtotal
             rental.subtotal = rental.daily_rate * rental.number_of_days
             
@@ -334,12 +392,14 @@ class RentalForm(forms.ModelForm):
                 # No commission
                 rental.commission_amount = 0
             
-            # Calculate total amount - commission reduces the total
+            # Calculate total amount - commission reduces the subtotal, then add additional fees
             rental.total_amount = (
                 rental.subtotal - 
                 rental.commission_amount + 
                 (rental.insurance_fee or 0) + 
-                (rental.security_deposit or 0)
+                (rental.security_deposit or 0) +
+                rental.driver_fee +
+                rental.car_seat_fee
             )
         
         if commit:

@@ -15,6 +15,86 @@ def vehicle_photo_upload_path(instance, filename):
     return os.path.join('vehicle_photos', str(instance.id or 'temp'), filename)
 
 
+class DeliveryLocation(models.Model):
+    """Delivery and return locations for rentals"""
+    
+    LOCATION_TYPE_CHOICES = [
+        ('pickup', _('Local de Entrega')),
+        ('return', _('Local de Devolução')),
+        ('both', _('Entrega e Devolução')),
+    ]
+    
+    name = models.CharField(
+        max_length=200,
+        help_text=_("Nome do local (ex: Aeroporto Amílcar Cabral, Hotel Pestana, etc.)")
+    )
+    address = models.TextField(
+        blank=True,
+        null=True,
+        help_text=_("Endereço completo do local")
+    )
+    location_type = models.CharField(
+        max_length=20,
+        choices=LOCATION_TYPE_CHOICES,
+        default='both',
+        help_text=_("Tipo de operação no local")
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        help_text=_("Informações adicionais sobre o local")
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text=_("Local ativo para uso")
+    )
+    default_pickup = models.BooleanField(
+        default=False,
+        help_text=_("Local padrão para entrega")
+    )
+    default_return = models.BooleanField(
+        default=False,
+        help_text=_("Local padrão para devolução")
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='created_locations'
+    )
+    
+    class Meta:
+        verbose_name = _("Local de Entrega/Devolução")
+        verbose_name_plural = _("Locais de Entrega/Devolução")
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['is_active']),
+            models.Index(fields=['location_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_location_type_display()})"
+    
+    def clean(self):
+        # Ensure only one default pickup and one default return location
+        if self.default_pickup:
+            DeliveryLocation.objects.filter(
+                default_pickup=True,
+                location_type__in=['pickup', 'both']
+            ).exclude(pk=self.pk).update(default_pickup=False)
+        
+        if self.default_return:
+            DeliveryLocation.objects.filter(
+                default_return=True,
+                location_type__in=['return', 'both']
+            ).exclude(pk=self.pk).update(default_return=False)
+
+
 class VehicleBrand(models.Model):
     """Vehicle brand lookup table"""
     name = models.CharField(max_length=100, unique=True)
@@ -201,6 +281,11 @@ class Customer(models.Model):
     # Identification
     id_number = models.CharField(max_length=50, unique=True, help_text=_("National ID or Passport Number"))
     driving_license_number = models.CharField(max_length=50, unique=True)
+    license_issue_date = models.DateField(
+        null=True, 
+        blank=True,
+        help_text=_("Data de emissão da carta de condução")
+    )
     license_expiry_date = models.DateField(null=True, blank=True)
     
     # Customer Status
@@ -324,6 +409,34 @@ class Rental(models.Model):
         help_text=_("Necessita de assento de criança")
     )
     
+    # Additional fees for services
+    driver_fee = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        help_text=_("Taxa adicional de motorista por dia (3000 ECV)")
+    )
+    car_seat_fee = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        help_text=_("Taxa adicional de assento criança por dia (500 ECV)")
+    )
+    
+    # Pickup and return locations
+    pickup_location = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text=_("Local de entrega do veículo")
+    )
+    return_location = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text=_("Local de devolução do veículo")
+    )
+    
     # Total
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -374,6 +487,10 @@ class Rental(models.Model):
         if self.daily_rate and self.number_of_days:
             base_amount = self.daily_rate * self.number_of_days
             
+            # Calculate additional service fees
+            self.driver_fee = Decimal('3000') * self.number_of_days if self.driver else Decimal('0')
+            self.car_seat_fee = Decimal('500') * self.number_of_days if self.car_seat else Decimal('0')
+            
             # Calculate commission amount based on either percentage or fixed amount
             commission = 0
             if self.commission_percent is not None:
@@ -397,7 +514,9 @@ class Rental(models.Model):
                 self.subtotal + 
                 (self.insurance_fee or 0) + 
                 (self.late_return_fee or 0) + 
-                (self.damage_fee or 0)
+                (self.damage_fee or 0) +
+                self.driver_fee +
+                self.car_seat_fee
             )
         
         super().save(*args, **kwargs)

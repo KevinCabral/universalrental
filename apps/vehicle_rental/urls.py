@@ -9,6 +9,7 @@ router = DefaultRouter()
 router.register(r'vehicles', views.VehicleViewSet)
 router.register(r'customers', views.CustomerViewSet)
 router.register(r'vehicle-brands', views.VehicleBrandViewSet)
+router.register(r'delivery-locations', views.DeliveryLocationViewSet)
 router.register(r'rentals', views.RentalViewSet)
 router.register(r'expenses', views.ExpenseViewSet)
 router.register(r'maintenance', views.MaintenanceRecordViewSet)
@@ -22,6 +23,7 @@ customer_router.register(r'rentals', views.CustomerRentalViewSet, basename='cust
 customer_router.register(r'evaluations', views.CustomerRentalEvaluationViewSet, basename='customer-evaluations')
 customer_router.register(r'vehicles', views.VehicleAvailabilityViewSet, basename='customer-vehicles')
 customer_router.register(r'vehicle-brands', views.VehicleBrandViewSet, basename='customer-vehicle-brands')
+customer_router.register(r'delivery-locations', views.DeliveryLocationViewSet, basename='customer-delivery-locations')
 
 urlpatterns = [
     # Dashboard and main views

@@ -1,5 +1,19 @@
 from rest_framework import serializers
-from .models import Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory, MaintenanceRecord, RentalEvaluation, VehiclePhoto
+from .models import (
+    Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory, 
+    MaintenanceRecord, RentalEvaluation, VehiclePhoto, DeliveryLocation
+)
+
+
+class DeliveryLocationSerializer(serializers.ModelSerializer):
+    location_type_display = serializers.CharField(source='get_location_type_display', read_only=True)
+    
+    class Meta:
+        model = DeliveryLocation
+        fields = [
+            'id', 'name', 'address', 'location_type', 'location_type_display',
+            'description', 'is_active', 'default_pickup', 'default_return'
+        ]
 
 
 class VehicleBrandSerializer(serializers.ModelSerializer):
@@ -154,6 +168,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     can_rent = serializers.BooleanField(read_only=True)
     rental_count = serializers.SerializerMethodField()
+    license_issue_date = serializers.DateField(required=False)
     license_expiry_date = serializers.DateField(required=False)
 
     class Meta:
@@ -162,7 +177,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             'id', 'first_name', 'last_name', 'full_name', 'email',
             'phone_number', 'address_line_1', 'address_line_2', 'city',
             'postal_code', 'country', 'id_number', 'driving_license_number',
-            'license_expiry_date', 'is_blacklisted', 'blacklist_reason',
+            'license_issue_date', 'license_expiry_date', 'is_blacklisted', 'blacklist_reason',
             'can_rent', 'rental_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -202,13 +217,15 @@ class RentalSerializer(serializers.ModelSerializer):
             'start_date', 'end_date', 'actual_return_date', 'daily_rate',
             'number_of_days', 'subtotal', 'commission_percent', 'commission_amount',
             'insurance_fee', 'security_deposit', 'late_return_fee', 'damage_fee',
+            'driver', 'car_seat', 'driver_fee', 'car_seat_fee',
+            'pickup_location', 'return_location',
             'total_amount', 'amount_paid', 'mileage_start', 'mileage_end',
-            'fuel_level_start', 'fuel_level_end', 'driver', 'car_seat',
+            'fuel_level_start', 'fuel_level_end',
             'status', 'notes', 'is_overdue', 'days_overdue', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'number_of_days', 'subtotal', 'commission_amount', 'total_amount',
-            'created_at', 'updated_at', 'created_by'
+            'number_of_days', 'subtotal', 'commission_amount', 'driver_fee', 'car_seat_fee',
+            'total_amount', 'created_at', 'updated_at', 'created_by'
         ]
     
     def get_vehicle_info(self, obj):
@@ -378,7 +395,7 @@ class CustomerRegistrationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'first_name', 'last_name', 'email', 'phone_number',
             'address_line_1', 'address_line_2', 'city', 'postal_code', 'country',
-            'id_number', 'driving_license_number', 'license_expiry_date',
+            'id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date',
             'password', 'password_confirm'
         ]
         read_only_fields = ['id']
@@ -528,7 +545,7 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'first_name', 'last_name', 'email', 'phone_number',
             'address_line_1', 'address_line_2', 'city', 'postal_code', 'country',
-            'id_number', 'driving_license_number', 'license_expiry_date',
+            'id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date',
             'is_blacklisted', 'rental_count', 'active_rentals', 'created_at'
         ]
         read_only_fields = ['id', 'username', 'is_blacklisted', 'created_at']

@@ -216,6 +216,18 @@
               <div class="row">
                 <div class="col-md-6">
                   <div class="form-group">
+                    <label for="{{ form.license_issue_date.id_for_label }}" class="form-label">
+                      Data de Emissão da Carta
+                    </label>
+                    {{ form.license_issue_date }}
+                    {% if form.license_issue_date.errors %}
+                      <div class="text-danger small">{{ form.license_issue_date.errors.0 }}</div>
+                    {% endif %}
+                    <small class="form-text text-muted">Data em que a carta de condução foi emitida</small>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
                     <label for="{{ form.license_expiry_date.id_for_label }}" class="form-label">
                       Data de Validade da Carta <span class="text-danger">*</span>
                     </label>

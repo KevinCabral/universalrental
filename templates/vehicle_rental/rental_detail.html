@@ -263,6 +263,18 @@
                         <td class="text-end">-{{ rental.commission_value|floatformat:2 }} CV</td>
                       </tr>
                       {% endif %}
+                      {% if rental.driver %}
+                      <tr class="table-primary">
+                        <td><strong><i class="fas fa-user-tie me-2"></i>Taxa de Motorista:</strong></td>
+                        <td class="text-end">+{{ rental.driver_fee|floatformat:2 }} CV</td>
+                      </tr>
+                      {% endif %}
+                      {% if rental.car_seat %}
+                      <tr class="table-primary">
+                        <td><strong><i class="fas fa-baby me-2"></i>Taxa de Assento Criança:</strong></td>
+                        <td class="text-end">+{{ rental.car_seat_fee|floatformat:2 }} CV</td>
+                      </tr>
+                      {% endif %}
                       {% if rental.late_return_fee %}
                       <tr class="table-warning">
                         <td><strong><i class="fas fa-exclamation-triangle me-2"></i>Taxa de Atraso:</strong></td>
@@ -283,7 +295,7 @@
                       {% endif %}
                       <tr class="table-success">
                         <td><strong><i class="fas fa-coins me-2"></i>Valor Total:</strong></td>
-                        <td class="text-end"><strong>{{ rental.subtotal|floatformat:2 }} CV</strong></td>
+                        <td class="text-end"><strong>{{ rental.total_amount|floatformat:2 }} CV</strong></td>
                       </tr>
                     </tbody>
                   </table>
@@ -303,7 +315,7 @@
                   <div class="col-6"><strong><i class="fas fa-user-tie me-1 text-muted"></i>Motorista:</strong></div>
                   <div class="col-6">
                     {% if rental.driver %}
-                      <span class="badge bg-success">Necessário</span>
+                      <span class="badge bg-success">Necessário (+{{ rental.driver_fee|floatformat:2 }} CV)</span>
                     {% else %}
                       <span class="badge bg-secondary">Não necessário</span>
                     {% endif %}
@@ -313,7 +325,7 @@
                   <div class="col-6"><strong><i class="fas fa-baby me-1 text-muted"></i>Assento de Criança:</strong></div>
                   <div class="col-6">
                     {% if rental.car_seat %}
-                      <span class="badge bg-success">Necessário</span>
+                      <span class="badge bg-success">Necessário (+{{ rental.car_seat_fee|floatformat:2 }} CV)</span>
                     {% else %}
                       <span class="badge bg-secondary">Não necessário</span>
                     {% endif %}
@@ -321,6 +333,30 @@
                 </div>
               </div>
             </div>
+            
+            <!-- Pickup and Return Locations -->
+            {% if rental.pickup_location or rental.return_location %}
+            <hr class="my-4">
+            <div class="row">
+              <div class="col-12">
+                <h6 class="text-primary mb-3">
+                  <i class="fas fa-map-pin me-2"></i>Locais de Entrega e Devolução
+                </h6>
+                {% if rental.pickup_location %}
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-arrow-down me-1 text-success"></i>Entrega:</strong></div>
+                  <div class="col-8">{{ rental.pickup_location }}</div>
+                </div>
+                {% endif %}
+                {% if rental.return_location %}
+                <div class="row mb-2">
+                  <div class="col-4"><strong><i class="fas fa-arrow-up me-1 text-warning"></i>Devolução:</strong></div>
+                  <div class="col-8">{{ rental.return_location }}</div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
             
             {% if rental.notes %}
             <hr class="my-4">

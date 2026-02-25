@@ -4,8 +4,41 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
     VehicleBrand, Vehicle, Customer, Rental, 
-    ExpenseCategory, Expense, MaintenanceRecord, RentalPhoto, RentalEvaluation
+    ExpenseCategory, Expense, MaintenanceRecord, RentalPhoto, RentalEvaluation, DeliveryLocation
 )
+
+
+@admin.register(DeliveryLocation)
+class DeliveryLocationAdmin(admin.ModelAdmin):
+    list_display = [
+        'name', 'location_type', 'is_active', 
+        'default_pickup', 'default_return', 'created_at'
+    ]
+    list_filter = ['location_type', 'is_active', 'default_pickup', 'default_return']
+    search_fields = ['name', 'address', 'description']
+    list_editable = ['is_active', 'default_pickup', 'default_return']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('name', 'address', 'location_type')
+        }),
+        ('Configurações', {
+            'fields': ('is_active', 'default_pickup', 'default_return')
+        }),
+        ('Descrição', {
+            'fields': ('description',)
+        }),
+        ('Metadados', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Creating new object
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(VehicleBrand)
@@ -69,9 +102,9 @@ class VehicleAdmin(admin.ModelAdmin):
 class CustomerAdmin(admin.ModelAdmin):
     list_display = [
         'full_name', 'email', 'phone_number', 'id_number',
-        'license_expiry_date', 'rental_count', 'is_blacklisted'
+        'license_issue_date', 'license_expiry_date', 'rental_count', 'is_blacklisted'
     ]
-    list_filter = ['is_blacklisted', 'country', 'license_expiry_date']
+    list_filter = ['is_blacklisted', 'country', 'license_issue_date', 'license_expiry_date']
     search_fields = [
         'first_name', 'last_name', 'email', 'phone_number', 
         'id_number', 'driving_license_number'
@@ -87,7 +120,7 @@ class CustomerAdmin(admin.ModelAdmin):
             'fields': ('address_line_1', 'address_line_2', 'city', 'postal_code', 'country')
         }),
         ('Identification', {
-            'fields': ('id_number', 'driving_license_number', 'license_expiry_date')
+            'fields': ('id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date')
         }),
         ('Status', {
             'fields': ('is_blacklisted', 'blacklist_reason')
@@ -137,7 +170,7 @@ class RentalAdmin(admin.ModelAdmin):
     list_editable = ['status']
     readonly_fields = [
         'number_of_days', 'subtotal', 'commission_amount', 
-        'total_amount', 'created_at', 'updated_at'
+        'driver_fee', 'car_seat_fee', 'total_amount', 'created_at', 'updated_at'
     ]
     inlines = [RentalPhotoInline]
     
@@ -150,6 +183,9 @@ class RentalAdmin(admin.ModelAdmin):
                 'daily_rate', 'number_of_days', 'subtotal',
                 'commission_percent', 'commission_amount'
             )
+        }),
+        ('Service Fees', {
+            'fields': ('driver_fee', 'car_seat_fee')
         }),
         ('Additional Charges', {
             'fields': ('insurance_fee', 'security_deposit', 'late_return_fee', 'damage_fee')
@@ -165,6 +201,9 @@ class RentalAdmin(admin.ModelAdmin):
         }),
         ('Additional Requirements', {
             'fields': ('driver', 'car_seat')
+        }),
+        ('Locations', {
+            'fields': ('pickup_location', 'return_location')
         }),
         ('Status & Notes', {
             'fields': ('status', 'notes')

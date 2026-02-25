@@ -14,12 +14,15 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
-from .models import Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand, ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto
+from .models import (
+    Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand, 
+    ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto, DeliveryLocation
+)
 from .forms import VehicleForm, CustomerForm, RentalForm
 from .serializers import (
     VehicleSerializer, CustomerSerializer, RentalSerializer,
     ExpenseSerializer, MaintenanceRecordSerializer, RentalEvaluationSerializer, VehiclePhotoSerializer,
-    VehicleBrandSerializer, ChangePasswordSerializer
+    VehicleBrandSerializer, ChangePasswordSerializer, DeliveryLocationSerializer
 )
 from .forms import VehicleForm, CustomerForm, RentalForm, ExpenseForm, MaintenanceRecordForm, RentalStartPhotosFormSet, RentalReturnPhotosFormSet
 from datetime import datetime, timedelta
@@ -2028,6 +2031,51 @@ class VehicleBrandViewSet(viewsets.ModelViewSet):
     """ViewSet for managing vehicle brands"""
     queryset = VehicleBrand.objects.all().order_by('name')
     serializer_class = VehicleBrandSerializer
+
+
+class DeliveryLocationViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing delivery/return locations"""
+    queryset = DeliveryLocation.objects.filter(is_active=True).order_by('name')
+    serializer_class = DeliveryLocationSerializer
+    permission_classes = [AllowAny]  # No authentication required for location access
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        location_type = self.request.query_params.get('location_type', None)
+        
+        if location_type in ['pickup', 'return', 'both']:
+            if location_type == 'pickup':
+                queryset = queryset.filter(location_type__in=['pickup', 'both'])
+            elif location_type == 'return':
+                queryset = queryset.filter(location_type__in=['return', 'both'])
+            else:
+                queryset = queryset.filter(location_type=location_type)
+        
+        return queryset
+    
+    @action(detail=False, methods=['get'])
+    def defaults(self, request):
+        """Get default pickup and return locations"""
+        pickup_default = self.get_queryset().filter(
+            default_pickup=True,
+            location_type__in=['pickup', 'both']
+        ).first()
+        return_default = self.get_queryset().filter(
+            default_return=True,
+            location_type__in=['return', 'both']  
+        ).first()
+        
+        return Response({
+            'pickup_default': DeliveryLocationSerializer(pickup_default).data if pickup_default else None,
+            'return_default': DeliveryLocationSerializer(return_default).data if return_default else None,
+        })
+    
+    def perform_create(self, serializer):
+        # Only set created_by if user is authenticated
+        if self.request.user.is_authenticated:
+            serializer.save(created_by=self.request.user)
+        else:
+            serializer.save()
     
     def list(self, request, *args, **kwargs):
         """List all vehicle brands with optional filtering and stats"""
