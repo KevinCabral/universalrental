@@ -168,14 +168,14 @@ class CustomerSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     can_rent = serializers.BooleanField(read_only=True)
     rental_count = serializers.SerializerMethodField()
-    license_issue_date = serializers.DateField(required=False)
+    age = serializers.SerializerMethodField()
     license_expiry_date = serializers.DateField(required=False)
 
     class Meta:
         model = Customer
         fields = [
             'id', 'first_name', 'last_name', 'full_name', 'email',
-            'phone_number', 'address_line_1', 'address_line_2', 'city',
+            'phone_number', 'birth_date', 'age', 'address_line_1', 'address_line_2', 'city',
             'postal_code', 'country', 'id_number', 'driving_license_number',
             'license_issue_date', 'license_expiry_date', 'is_blacklisted', 'blacklist_reason',
             'can_rent', 'rental_count', 'created_at', 'updated_at'
@@ -184,6 +184,13 @@ class CustomerSerializer(serializers.ModelSerializer):
     
     def get_rental_count(self, obj):
         return obj.rentals.count()
+    
+    def get_age(self, obj):
+        if obj.birth_date:
+            from datetime import date
+            today = date.today()
+            return today.year - obj.birth_date.year - ((today.month, today.day) < (obj.birth_date.month, obj.birth_date.day))
+        return None
     
     def validate_email(self, value):
         if value:
@@ -393,7 +400,7 @@ class CustomerRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            'id', 'first_name', 'last_name', 'email', 'phone_number',
+            'id', 'first_name', 'last_name', 'email', 'phone_number', 'birth_date',
             'address_line_1', 'address_line_2', 'city', 'postal_code', 'country',
             'id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date',
             'password', 'password_confirm'
@@ -543,7 +550,7 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            'id', 'username', 'first_name', 'last_name', 'email', 'phone_number',
+            'id', 'username', 'first_name', 'last_name', 'email', 'phone_number', 'birth_date',
             'address_line_1', 'address_line_2', 'city', 'postal_code', 'country',
             'id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date',
             'is_blacklisted', 'rental_count', 'active_rentals', 'created_at'

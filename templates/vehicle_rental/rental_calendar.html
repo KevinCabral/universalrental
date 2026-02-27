@@ -1,0 +1,345 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Calendário de Aluguéis | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Calendário de Aluguéis</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:vehicle_list' %}">Veículos</a></li>
+          <li class="breadcrumb-item active">Calendário</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Filters and Navigation -->
+    <div class="row mb-4">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-calendar-alt text-primary me-2"></i>
+              {{ current_month_name }} {{ current_year }}
+            </h5>
+            <div class="card-header-right">
+              <a href="{% url 'vehicle_rental:vehicle_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Voltar aos Veículos
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <!-- Month Navigation -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                  <a href="?year={{ prev_year }}&month={{ prev_month }}{% if current_vehicle %}&vehicle={{ current_vehicle }}{% endif %}" 
+                     class="btn btn-outline-primary btn-sm me-3">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                  </a>
+                  <h6 class="mb-0 mx-3">{{ current_month_name }} {{ current_year }}</h6>
+                  <a href="?year={{ next_year }}&month={{ next_month }}{% if current_vehicle %}&vehicle={{ current_vehicle }}{% endif %}" 
+                     class="btn btn-outline-primary btn-sm ms-3">
+                    Próximo <i class="fas fa-chevron-right"></i>
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <!-- Vehicle Filter -->
+                <form method="get" class="row g-2">
+                  <input type="hidden" name="year" value="{{ current_year }}">
+                  <input type="hidden" name="month" value="{{ current_month }}">
+                  <div class="col-8">
+                    <select name="vehicle" class="form-select">
+                      <option value="">Todos os Veículos</option>
+                      {% for vehicle in vehicles %}
+                        <option value="{{ vehicle.id }}" {% if current_vehicle == vehicle.id|stringformat:"s" %}selected{% endif %}>
+                          {{ vehicle.brand.name }} {{ vehicle.model }} ({{ vehicle.registration_number }})
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                      <i class="fas fa-filter"></i> Filtrar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="row">
+              <div class="col-md-12">
+                <div class="d-flex align-items-center gap-4 flex-wrap">
+                  <div class="d-flex align-items-center">
+                    <div class="calendar-legend confirmed me-2"></div>
+                    <span class="small text-muted">Confirmado</span>
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <div class="calendar-legend pending me-2"></div>
+                    <span class="small text-muted">Pendente</span>
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <div class="calendar-legend mixed me-2"></div>
+                    <span class="small text-muted">Misto</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="calendar-container">
+              <table class="table table-bordered mb-0 calendar-table">
+                <thead class="table-light">
+                  <tr>
+                    <th>Dom</th>
+                    <th>Seg</th>
+                    <th>Ter</th>
+                    <th>Qua</th>
+                    <th>Qui</th>
+                    <th>Sex</th>
+                    <th>Sáb</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for week in weeks %}
+                  <tr>
+                    {% for day in week %}
+                    <td class="calendar-day {% if day %}{% if day.has_confirmed and day.has_pending %}mixed{% elif day.has_confirmed %}confirmed{% elif day.has_pending %}pending{% endif %}{% endif %}">
+                      {% if day %}
+                        <div class="day-header">
+                          <span class="day-number">{{ day.day }}</span>
+                        </div>
+                        {% if day.rentals %}
+                          <div class="rental-list">
+                            {% for rental in day.rentals %}
+                            <div class="rental-item {% if rental.status == 'confirmed' %}confirmed{% else %}pending{% endif %}">
+                              <div class="rental-content">
+                                <div class="vehicle-info">
+                                  <i class="fas fa-car me-1"></i>
+                                  {{ rental.vehicle.registration_number }}
+                                </div>
+                                <div class="customer-info">
+                                  <i class="fas fa-user me-1"></i>
+                                  {{ rental.customer.first_name }} {{ rental.customer.last_name }}
+                                </div>
+                                <div class="rental-dates small">
+                                  {{ rental.start_date|date:"d/m" }} - {{ rental.end_date|date:"d/m" }}
+                                </div>
+                              </div>
+                            </div>
+                            {% endfor %}
+                          </div>
+                        {% endif %}
+                      {% endif %}
+                    </td>
+                    {% endfor %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rental Details -->
+    {% if rentals %}
+    <div class="row mt-4">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">
+              <i class="fas fa-list-ul text-primary me-2"></i>
+              Aluguéis do Período ({{ rentals.count }})
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th>Estado</th>
+                    <th>Veículo</th>
+                    <th>Cliente</th>
+                    <th>Período</th>
+                    <th>Valor</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for rental in rentals %}
+                  <tr>
+                    <td>
+                      {% if rental.status == 'confirmed' %}
+                        <span class="badge bg-success">Confirmado</span>
+                      {% else %}
+                        <span class="badge bg-warning">Pendente</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {{ rental.vehicle.brand.name }} {{ rental.vehicle.model }}<br>
+                      <small class="text-muted">{{ rental.vehicle.registration_number }}</small>
+                    </td>
+                    <td>
+                      {{ rental.customer.first_name }} {{ rental.customer.last_name }}<br>
+                      <small class="text-muted">{{ rental.customer.email }}</small>
+                    </td>
+                    <td>
+                      {{ rental.start_date|date:"d/m/Y" }} - {{ rental.end_date|date:"d/m/Y" }}<br>
+                      <small class="text-muted">{{ rental.number_of_days }} dias</small>
+                    </td>
+                    <td>
+                      <strong>{{ rental.total_amount|floatformat:2 }} €</strong>
+                    </td>
+                    <td>
+                      <a href="{% url 'vehicle_rental:rental_detail' rental.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<style>
+.calendar-table {
+  border: 2px solid #dee2e6;
+}
+
+.calendar-day {
+  height: 120px;
+  vertical-align: top;
+  padding: 0;
+  position: relative;
+  border: 1px solid #e0e0e0;
+}
+
+.calendar-day.confirmed {
+  background-color: #d4edda !important;
+}
+
+.calendar-day.pending {
+  background-color: #fff3cd !important;
+}
+
+.calendar-day.mixed {
+  background: linear-gradient(135deg, #d4edda 50%, #fff3cd 50%);
+}
+
+.day-header {
+  padding: 8px;
+  background-color: rgba(255,255,255,0.8);
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.day-number {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.rental-list {
+  padding: 4px;
+  max-height: 85px;
+  overflow-y: auto;
+}
+
+.rental-item {
+  background: rgba(255,255,255,0.9);
+  margin-bottom: 2px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  border-left: 3px solid #28a745;
+  font-size: 11px;
+}
+
+.rental-item.pending {
+  border-left-color: #ffc107;
+}
+
+.rental-item.confirmed {
+  border-left-color: #28a745;
+}
+
+.vehicle-info, .customer-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.rental-dates {
+  color: #666;
+  margin-top: 2px;
+}
+
+.calendar-legend {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+}
+
+.calendar-legend.confirmed {
+  background-color: #d4edda;
+}
+
+.calendar-legend.pending {
+  background-color: #fff3cd;
+}
+
+.calendar-legend.mixed {
+  background: linear-gradient(135deg, #d4edda 50%, #fff3cd 50%);
+}
+
+.calendar-container {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .calendar-day {
+    height: 80px;
+    font-size: 12px;
+  }
+  
+  .rental-item {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  
+  .day-number {
+    font-size: 12px;
+  }
+}
+</style>
+
+{% endblock content %}

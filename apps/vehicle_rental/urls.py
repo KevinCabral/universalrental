@@ -29,6 +29,7 @@ urlpatterns = [
     # Dashboard and main views
     path('', views.dashboard, name='dashboard'),
     path('vehicles/', views.vehicle_list, name='vehicle_list'),
+    path('vehicles/calendar/', views.rental_calendar, name='rental_calendar'),
     path('vehicles/create/', views.vehicle_create, name='vehicle_create'),
     path('vehicles/<int:pk>/', views.vehicle_detail, name='vehicle_detail'),
     path('vehicles/<int:pk>/edit/', views.vehicle_edit, name='vehicle_edit'),

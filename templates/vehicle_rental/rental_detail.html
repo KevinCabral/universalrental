@@ -345,13 +345,13 @@
                 {% if rental.pickup_location %}
                 <div class="row mb-2">
                   <div class="col-4"><strong><i class="fas fa-arrow-down me-1 text-success"></i>Entrega:</strong></div>
-                  <div class="col-8">{{ rental.pickup_location }}</div>
+                  <div class="col-8">{{ rental.pickup_location.name }}</div>
                 </div>
                 {% endif %}
                 {% if rental.return_location %}
                 <div class="row mb-2">
                   <div class="col-4"><strong><i class="fas fa-arrow-up me-1 text-warning"></i>Devolução:</strong></div>
-                  <div class="col-8">{{ rental.return_location }}</div>
+                  <div class="col-8">{{ rental.return_location.name }}</div>
                 </div>
                 {% endif %}
               </div>

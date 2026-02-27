@@ -270,6 +270,9 @@ class Customer(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20)
+    birth_date = models.DateField(
+        help_text=_("Data de nascimento do cliente")
+    )
     
     # Address
     address_line_1 = models.CharField(max_length=200, blank=True, null=True)
@@ -282,8 +285,6 @@ class Customer(models.Model):
     id_number = models.CharField(max_length=50, unique=True, help_text=_("National ID or Passport Number"))
     driving_license_number = models.CharField(max_length=50, unique=True)
     license_issue_date = models.DateField(
-        null=True, 
-        blank=True,
         help_text=_("Data de emissão da carta de condução")
     )
     license_expiry_date = models.DateField(null=True, blank=True)
@@ -424,16 +425,20 @@ class Rental(models.Model):
     )
     
     # Pickup and return locations
-    pickup_location = models.CharField(
-        max_length=200,
+    pickup_location = models.ForeignKey(
+        'DeliveryLocation',
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
+        related_name='pickup_rentals',
         help_text=_("Local de entrega do veículo")
     )
-    return_location = models.CharField(
-        max_length=200,
+    return_location = models.ForeignKey(
+        'DeliveryLocation',
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
+        related_name='return_rentals',
         help_text=_("Local de devolução do veículo")
     )
     

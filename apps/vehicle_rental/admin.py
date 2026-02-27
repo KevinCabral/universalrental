@@ -101,10 +101,10 @@ class VehicleAdmin(admin.ModelAdmin):
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = [
-        'full_name', 'email', 'phone_number', 'id_number',
+        'full_name', 'email', 'phone_number', 'birth_date', 'id_number',
         'license_issue_date', 'license_expiry_date', 'rental_count', 'is_blacklisted'
     ]
-    list_filter = ['is_blacklisted', 'country', 'license_issue_date', 'license_expiry_date']
+    list_filter = ['is_blacklisted', 'country', 'birth_date', 'license_issue_date', 'license_expiry_date']
     search_fields = [
         'first_name', 'last_name', 'email', 'phone_number', 
         'id_number', 'driving_license_number'
@@ -114,7 +114,7 @@ class CustomerAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Personal Information', {
-            'fields': ('first_name', 'last_name', 'email', 'phone_number')
+            'fields': ('first_name', 'last_name', 'email', 'phone_number', 'birth_date')
         }),
         ('Address', {
             'fields': ('address_line_1', 'address_line_2', 'city', 'postal_code', 'country')

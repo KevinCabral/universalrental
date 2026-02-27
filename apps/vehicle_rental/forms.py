@@ -91,7 +91,7 @@ class CustomerForm(forms.ModelForm):
     class Meta:
         model = Customer
         fields = [
-            'first_name', 'last_name', 'email', 'phone_number',
+            'first_name', 'last_name', 'email', 'phone_number', 'birth_date',
             'address_line_1', 'address_line_2', 'city', 'postal_code', 'country',
             'id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date'
         ]
@@ -100,6 +100,7 @@ class CustomerForm(forms.ModelForm):
             'last_name': 'Apelido',
             'email': 'Email',
             'phone_number': 'Número de Telefone',
+            'birth_date': 'Data de Nascimento',
             'address_line_1': 'Morada (Linha 1)',
             'address_line_2': 'Morada (Linha 2)',
             'city': 'Cidade',
@@ -111,6 +112,7 @@ class CustomerForm(forms.ModelForm):
             'license_expiry_date': 'Data de Validade da Carta'
         }
         widgets = {
+            'birth_date': forms.DateInput(attrs={'type': 'date'}),
             'license_issue_date': forms.DateInput(attrs={'type': 'date'}),
             'license_expiry_date': forms.DateInput(attrs={'type': 'date'}),
             'email': forms.EmailInput(),
@@ -125,7 +127,6 @@ class CustomerForm(forms.ModelForm):
         self.fields['email'].required = False
         self.fields['postal_code'].required = False
         self.fields['id_number'].required = False
-        self.fields['license_issue_date'].required = False
         self.fields['license_expiry_date'].required = False
     
     def clean_email(self):
@@ -153,6 +154,20 @@ class CustomerForm(forms.ModelForm):
                 if existing_customer.user is not None:
                     raise ValidationError('Customer with this driving license number already exists.')
         return license_number
+    
+    def clean_birth_date(self):
+        birth_date = self.cleaned_data.get('birth_date')
+        if birth_date:
+            if birth_date >= timezone.now().date():
+                raise ValidationError('A data de nascimento deve ser no passado.')
+            
+            # Check minimum age (18 years)
+            from dateutil.relativedelta import relativedelta
+            min_age_date = timezone.now().date() - relativedelta(years=18)
+            if birth_date > min_age_date:
+                raise ValidationError('O cliente deve ter pelo menos 18 anos.')
+        
+        return birth_date
     
     def clean_license_issue_date(self):
         issue_date = self.cleaned_data.get('license_issue_date')

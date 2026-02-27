@@ -25,9 +25,10 @@ from .serializers import (
     VehicleBrandSerializer, ChangePasswordSerializer, DeliveryLocationSerializer
 )
 from .forms import VehicleForm, CustomerForm, RentalForm, ExpenseForm, MaintenanceRecordForm, RentalStartPhotosFormSet, RentalReturnPhotosFormSet
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal
 import json
+import calendar
 
 
 # Dashboard and Main Views
@@ -126,6 +127,110 @@ def vehicle_list(request):
     }
     
     return render(request, 'vehicle_rental/vehicle_list.html', context)
+
+
+@login_required
+def rental_calendar(request):
+    """Calendar view showing confirmed and pending rentals with vehicle/month filters"""
+    
+    # Get filter parameters
+    vehicle_filter = request.GET.get('vehicle')
+    year = request.GET.get('year', datetime.now().year)
+    month = request.GET.get('month', datetime.now().month)
+    
+    try:
+        year = int(year)
+        month = int(month)
+    except (ValueError, TypeError):
+        year = datetime.now().year
+        month = datetime.now().month
+    
+    # Get confirmed and pending rentals for the month
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    
+    # Filter rentals
+    rentals = Rental.objects.filter(
+        status__in=['confirmed', 'pending'],
+        start_date__lte=end_date,
+        end_date__gte=start_date
+    ).select_related('vehicle', 'customer').order_by('start_date')
+    
+    if vehicle_filter and vehicle_filter != '':
+        rentals = rentals.filter(vehicle_id=vehicle_filter)
+    
+    # Build calendar data
+    cal = calendar.Calendar()
+    month_days = list(cal.itermonthdays(year, month))
+    
+    # Group rentals by date
+    rental_dict = {}
+    for rental in rentals:
+        # Convert datetime to date for comparison
+        rental_start = rental.start_date.date() if hasattr(rental.start_date, 'date') else rental.start_date
+        rental_end = rental.end_date.date() if hasattr(rental.end_date, 'date') else rental.end_date
+        
+        current_date = rental_start
+        while current_date <= rental_end:
+            if start_date <= current_date <= end_date:
+                if current_date not in rental_dict:
+                    rental_dict[current_date] = []
+                rental_dict[current_date].append(rental)
+            current_date += timedelta(days=1)
+    
+    # Create calendar structure
+    weeks = []
+    week = []
+    
+    for day in month_days:
+        if day == 0:
+            week.append(None)
+        else:
+            day_date = date(year, month, day)
+            day_rentals = rental_dict.get(day_date, [])
+            week.append({
+                'day': day,
+                'date': day_date,
+                'rentals': day_rentals,
+                'has_confirmed': any(r.status == 'confirmed' for r in day_rentals),
+                'has_pending': any(r.status == 'pending' for r in day_rentals)
+            })
+        
+        if len(week) == 7:
+            weeks.append(week)
+            week = []
+    
+    if week:
+        weeks.append(week)
+    
+    # Navigation dates
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+    
+    # Filter options
+    vehicles = Vehicle.objects.filter(is_active=True).order_by('brand__name', 'model')
+    month_name = calendar.month_name[month]
+    
+    context = {
+        'weeks': weeks,
+        'current_year': year,
+        'current_month': month,
+        'current_month_name': month_name,
+        'prev_year': prev_year,
+        'prev_month': prev_month,
+        'next_year': next_year,
+        'next_month': next_month,
+        'vehicles': vehicles,
+        'current_vehicle': vehicle_filter,
+        'rentals': rentals
+    }
+    
+    return render(request, 'vehicle_rental/rental_calendar.html', context)
 
 
 @login_required
