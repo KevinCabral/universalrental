@@ -15,6 +15,7 @@ router.register(r'expenses', views.ExpenseViewSet)
 router.register(r'maintenance', views.MaintenanceRecordViewSet)
 router.register(r'evaluations', views.RentalEvaluationViewSet)
 router.register(r'vehicle-photos', views.VehiclePhotoViewSet)
+router.register(r'system-config', views.SystemConfigurationViewSet, basename='system-config')
 
 # Customer-facing API Router
 customer_router = DefaultRouter()
@@ -70,6 +71,9 @@ urlpatterns = [
     path('api/customer/request-password-reset/', views.request_password_reset, name='request_password_reset'),
     path('api/customer/reset-password/', views.reset_password, name='reset_password'),
     path('api/customer/', include(customer_router.urls)),
+    
+    # Public API endpoints (no authentication required)
+    path('api/public/system-config/', views.SystemConfigurationAPIView.as_view(), name='system_configuration_api'),
     
     # AJAX endpoints
     path('ajax/vehicle-availability/', views.check_vehicle_availability, name='check_vehicle_availability'),

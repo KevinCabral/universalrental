@@ -255,12 +255,12 @@
                       {% if rental.commission_percent %}
                       <tr>
                         <td><strong><i class="fas fa-percentage me-2"></i>Comissão ({{ rental.commission_percent }}%):</strong></td>
-                        <td class="text-end">-{{ rental.commission_value|floatformat:2 }} CV</td>
+                        <td class="text-end">+{{ rental.commission_value|floatformat:2 }} CV</td>
                       </tr>
                       {% elif rental.commission_amount %}
                       <tr>
                         <td><strong><i class="fas fa-euro-sign me-2"></i>Comissão (Valor Fixo):</strong></td>
-                        <td class="text-end">-{{ rental.commission_value|floatformat:2 }} CV</td>
+                        <td class="text-end">+{{ rental.commission_value|floatformat:2 }} CV</td>
                       </tr>
                       {% endif %}
                       {% if rental.driver %}

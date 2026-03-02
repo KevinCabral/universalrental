@@ -10,19 +10,21 @@ from django.core.paginator import Paginator
 from django.template.loader import render_to_string
 from django.conf import settings
 from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
 from .models import (
     Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand, 
-    ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto, DeliveryLocation
+    ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto, DeliveryLocation,
+    SystemConfiguration
 )
 from .forms import VehicleForm, CustomerForm, RentalForm
 from .serializers import (
     VehicleSerializer, CustomerSerializer, RentalSerializer,
     ExpenseSerializer, MaintenanceRecordSerializer, RentalEvaluationSerializer, VehiclePhotoSerializer,
-    VehicleBrandSerializer, ChangePasswordSerializer, DeliveryLocationSerializer
+    VehicleBrandSerializer, ChangePasswordSerializer, DeliveryLocationSerializer, SystemConfigurationSerializer
 )
 from .forms import VehicleForm, CustomerForm, RentalForm, ExpenseForm, MaintenanceRecordForm, RentalStartPhotosFormSet, RentalReturnPhotosFormSet
 from datetime import datetime, timedelta, date
@@ -3482,3 +3484,43 @@ def reset_password(request):
         'message': 'Password reset successfully',
         'email': email
     }, status=status.HTTP_200_OK)
+
+
+class SystemConfigurationAPIView(APIView):
+    """
+    API view for system configuration/rates 
+    GET: Retrieve current configuration (no authentication required)
+    """
+    permission_classes = []  # No authentication required
+    
+    def get(self, request):
+        """Get current system configuration"""
+        try:
+            config = SystemConfiguration.get_instance()
+            serializer = SystemConfigurationSerializer(config)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'error': 'Failed to retrieve system configuration',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SystemConfigurationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for system configuration/rates - appears in Swagger
+    GET: Retrieve current configuration (no authentication required)
+    """
+    queryset = SystemConfiguration.objects.all()
+    serializer_class = SystemConfigurationSerializer
+    permission_classes = []  # No authentication required
+    
+    def get_object(self):
+        """Always return the singleton instance"""
+        return SystemConfiguration.get_instance()
+    
+    def list(self, request, *args, **kwargs):
+        """Return the singleton configuration"""
+        config = self.get_object()
+        serializer = self.get_serializer(config)
+        return Response(serializer.data)

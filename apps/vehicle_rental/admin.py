@@ -4,7 +4,8 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
     VehicleBrand, Vehicle, Customer, Rental, 
-    ExpenseCategory, Expense, MaintenanceRecord, RentalPhoto, RentalEvaluation, DeliveryLocation
+    ExpenseCategory, Expense, MaintenanceRecord, RentalPhoto, RentalEvaluation, DeliveryLocation,
+    SystemConfiguration
 )
 
 
@@ -67,7 +68,7 @@ class VehicleAdmin(admin.ModelAdmin):
         'model', 'color'
     ]
     list_editable = ['status', 'daily_rate', 'is_active']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['description_en', 'description_fr', 'created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
@@ -81,6 +82,10 @@ class VehicleAdmin(admin.ModelAdmin):
         }),
         ('Features', {
             'fields': ('panoramic_roof', 'air_conditioning')
+        }),
+        ('Description', {
+            'fields': ('description', 'description_en', 'description_fr'),
+            'description': 'Enter description in Portuguese. English and French translations will be generated automatically.'
         }),
         ('Operational Data', {
             'fields': ('mileage', 'purchase_price', 'date_of_purchase', 'daily_rate')
@@ -428,6 +433,70 @@ class RentalEvaluationAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'rental__customer', 'rental__vehicle__brand'
         )
+
+
+@admin.register(SystemConfiguration)
+class SystemConfigurationAdmin(admin.ModelAdmin):
+    list_display = [
+        'get_title', 'get_service_fee_display', 'driver_daily_rate', 'car_seat_daily_rate',
+        'euro_exchange_rate', 'usd_exchange_rate', 'last_updated'
+    ]
+    readonly_fields = ['last_updated', 'get_service_fee_type']
+    
+    fieldsets = (
+        ('Taxa de Serviço', {
+            'fields': ('get_service_fee_type', 'service_fee_percentage', 'service_fee_amount'),
+            'description': 'Configure a taxa de serviço aplicada aos aluguéis (percentual OU valor fixo)'
+        }),
+        ('Valores Diários dos Serviços Adicionais', {
+            'fields': ('driver_daily_rate', 'car_seat_daily_rate'),
+            'description': 'Valores em CVE para serviços adicionais por dia'
+        }),
+        ('Taxas de Câmbio', {
+            'fields': ('euro_exchange_rate', 'usd_exchange_rate'),
+            'description': 'Taxas de conversão para EUR e USD (1 EUR/USD = X CVE)'
+        }),
+        ('Metadados', {
+            'fields': ('last_updated', 'updated_by'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_title(self, obj):
+        return "Configurações do Sistema"
+    get_title.short_description = 'Configuração'
+    
+    def get_service_fee_display(self, obj):
+        """Display the service fee configuration"""
+        if obj.service_fee_amount is not None:
+            return f"{obj.service_fee_amount} CVE (fixo)"
+        elif obj.service_fee_percentage is not None:
+            return f"{obj.service_fee_percentage}% (percentual)"
+        else:
+            return "10% (padrão)"
+    get_service_fee_display.short_description = 'Taxa de Serviço'
+    
+    def get_service_fee_type(self, obj):
+        """Display current service fee type"""
+        if obj.service_fee_amount is not None:
+            return "Valor Fixo"
+        elif obj.service_fee_percentage is not None:
+            return "Percentual"
+        else:
+            return "Percentual (padrão)"
+    get_service_fee_type.short_description = 'Tipo de Taxa'
+    
+    def has_add_permission(self, request):
+        # Only allow adding if no configuration exists
+        return not SystemConfiguration.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Never allow deletion of system configuration
+        return False
+    
+    def save_model(self, request, obj, form, change):
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 # Custom admin site configuration

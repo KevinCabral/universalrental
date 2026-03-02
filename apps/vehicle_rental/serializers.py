@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
-    Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory, 
-    MaintenanceRecord, RentalEvaluation, VehiclePhoto, DeliveryLocation
+    Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory,
+    MaintenanceRecord, RentalEvaluation, VehiclePhoto, DeliveryLocation, SystemConfiguration
 )
 
 
@@ -60,7 +60,7 @@ class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            'id', 'brand', 'brand_name', 'model', 'year', 'description', 'chassis_number',
+            'id', 'brand', 'brand_name', 'model', 'year', 'description', 'description_en', 'description_fr', 'chassis_number',
             'registration_number', 'color', 'photo', 'engine_size', 'fuel_type',
             'gearbox_type', 'panoramic_roof', 'air_conditioning', 'number_of_seats',
             'mileage', 'purchase_price', 'date_of_purchase', 'daily_rate',
@@ -221,7 +221,7 @@ class RentalSerializer(serializers.ModelSerializer):
         model = Rental
         fields = [
             'id', 'vehicle', 'vehicle_info', 'customer', 'customer_name',
-            'start_date', 'end_date', 'actual_return_date', 'daily_rate',
+            'start_date', 'end_date', 'actual_return_date', 'currency', 'daily_rate',
             'number_of_days', 'subtotal', 'commission_percent', 'commission_amount',
             'insurance_fee', 'security_deposit', 'late_return_fee', 'damage_fee',
             'driver', 'car_seat', 'driver_fee', 'car_seat_fee',
@@ -575,7 +575,7 @@ class CustomerRentalSerializer(serializers.ModelSerializer):
         model = Rental
         fields = [
             'id', 'vehicle_info', 'start_date', 'end_date', 'days_duration',
-            'total_amount', 'driver', 'car_seat', 'status', 'status_display',
+            'currency', 'total_amount', 'driver', 'car_seat', 'status', 'status_display',
             'notes', 'evaluation', 'created_at'
         ]
         read_only_fields = ['id', 'total_amount', 'created_at']
@@ -631,7 +631,7 @@ class CustomerVehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            'id', 'brand', 'brand_name', 'model', 'year', 'description',
+            'id', 'brand', 'brand_name', 'model', 'year', 'description', 'description_en', 'description_fr',
             'registration_number', 'color', 'photo', 'fuel_type',
             'gearbox_type', 'panoramic_roof', 'air_conditioning', 'number_of_seats',
             'daily_rate', 'status', 'is_available', 'photos_count', 'active_rentals',
@@ -734,3 +734,51 @@ class ChangePasswordSerializer(serializers.Serializer):
         # Store customer in validated_data for use in the view
         data['customer'] = customer
         return data
+
+
+class SystemConfigurationSerializer(serializers.ModelSerializer):
+    """Serializer for system configuration/rates"""
+    
+    # Read-only fields for converted rates
+    driver_rate_eur = serializers.ReadOnlyField()
+    driver_rate_usd = serializers.ReadOnlyField()
+    car_seat_rate_eur = serializers.ReadOnlyField()
+    car_seat_rate_usd = serializers.ReadOnlyField()
+
+    # Service fee info
+    service_fee_type = serializers.ReadOnlyField()
+    service_fee_usd = serializers.SerializerMethodField()
+    service_fee_eur = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SystemConfiguration
+        fields = [
+            'id',
+            'service_fee_percentage',
+            'service_fee_amount',
+            'service_fee_type',
+            'driver_daily_rate',
+            'car_seat_daily_rate',
+            'euro_exchange_rate',
+            'usd_exchange_rate',
+            'driver_rate_eur',
+            'driver_rate_usd',
+            'car_seat_rate_eur',
+            'car_seat_rate_usd',
+            'service_fee_eur',
+            'service_fee_usd',
+            'last_updated'
+        ]
+        read_only_fields = ['last_updated', 'service_fee_type']
+
+    def get_service_fee_eur(self, obj):
+        """Get service fee in EUR (only for fixed amounts)"""
+        if obj.service_fee_amount is not None:
+            return round(obj.service_fee_amount / obj.euro_exchange_rate, 2)
+        return None  # Percentage fees don't have currency conversion
+    
+    def get_service_fee_usd(self, obj):
+        """Get service fee in USD (only for fixed amounts)"""
+        if obj.service_fee_amount is not None:
+            return round(obj.service_fee_amount / obj.usd_exchange_rate, 2)
+        return None  # Percentage fees don't have currency conversion

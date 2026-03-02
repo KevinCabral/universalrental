@@ -328,19 +328,6 @@
                     {% endif %}
                     <small class="form-text text-muted">{{ form.pickup_location_choice.help_text }}</small>
                   </div>
-                  
-                  <div class="form-group mt-2">
-                    <label for="{{ form.pickup_location.id_for_label }}" class="form-label">{{ form.pickup_location.label }} (Personalizado)</label>
-                    {{ form.pickup_location }}
-                    {% if form.pickup_location.errors %}
-                      <div class="text-danger">
-                        {% for error in form.pickup_location.errors %}
-                          <small>{{ error }}</small>
-                        {% endfor %}
-                      </div>
-                    {% endif %}
-                    <small class="form-text text-muted">Local onde o veículo será entregue ao cliente</small>
-                  </div>
                 </div>
 
                 <div class="col-md-6">
@@ -355,19 +342,6 @@
                       </div>
                     {% endif %}
                     <small class="form-text text-muted">{{ form.return_location_choice.help_text }}</small>
-                  </div>
-                  
-                  <div class="form-group mt-2">
-                    <label for="{{ form.return_location.id_for_label }}" class="form-label">{{ form.return_location.label }} (Personalizado)</label>
-                    {{ form.return_location }}
-                    {% if form.return_location.errors %}
-                      <div class="text-danger">
-                        {% for error in form.return_location.errors %}
-                          <small>{{ error }}</small>
-                        {% endfor %}
-                      </div>
-                    {% endif %}
-                    <small class="form-text text-muted">Local onde o veículo será devolvido pelo cliente</small>
                   </div>
                 </div>
               </div>
@@ -569,58 +543,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (dailyRateInput) dailyRateInput.value = '';
                 if (mileageStartInput) mileageStartInput.value = '';
                 calculateTotals();
-            }
-        });
-    }
-    
-    // Handle location synchronization between dropdown and text inputs
-    const pickupChoiceSelect = document.getElementById('id_pickup_location_choice');
-    const pickupLocationInput = document.getElementById('id_pickup_location');
-    const returnChoiceSelect = document.getElementById('id_return_location_choice');
-    const returnLocationInput = document.getElementById('id_return_location');
-    
-    if (pickupChoiceSelect && pickupLocationInput) {
-        pickupChoiceSelect.addEventListener('change', function() {
-            if (this.value) {
-                // Get selected option text
-                const selectedOption = this.options[this.selectedIndex];
-                pickupLocationInput.value = selectedOption.text;
-                pickupLocationInput.readOnly = true;
-                pickupLocationInput.style.backgroundColor = '#f8f9fa';
-            } else {
-                pickupLocationInput.value = '';
-                pickupLocationInput.readOnly = false;
-                pickupLocationInput.style.backgroundColor = '';
-            }
-        });
-        
-        // If manual edit, clear dropdown
-        pickupLocationInput.addEventListener('focus', function() {
-            if (!this.readOnly) {
-                pickupChoiceSelect.value = '';
-            }
-        });
-    }
-    
-    if (returnChoiceSelect && returnLocationInput) {
-        returnChoiceSelect.addEventListener('change', function() {
-            if (this.value) {
-                // Get selected option text
-                const selectedOption = this.options[this.selectedIndex];
-                returnLocationInput.value = selectedOption.text;
-                returnLocationInput.readOnly = true;
-                returnLocationInput.style.backgroundColor = '#f8f9fa';
-            } else {
-                returnLocationInput.value = '';
-                returnLocationInput.readOnly = false;
-                returnLocationInput.style.backgroundColor = '';
-            }
-        });
-        
-        // If manual edit, clear dropdown
-        returnLocationInput.addEventListener('focus', function() {
-            if (!this.readOnly) {
-                returnChoiceSelect.value = '';
             }
         });
     }

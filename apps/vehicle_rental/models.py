@@ -146,6 +146,14 @@ class Vehicle(models.Model):
         blank=True, null=True,
         help_text=_("Additional description or notes about the vehicle")
     )
+    description_en = models.TextField(
+        blank=True, null=True,
+        help_text=_("Description in English (auto-translated)")
+    )
+    description_fr = models.TextField(
+        blank=True, null=True,
+        help_text=_("Description in French (auto-translated)")
+    )
     
     # Identification
     chassis_number = models.CharField(
@@ -257,6 +265,54 @@ class Vehicle(models.Model):
         ).exists()
         
         return not overlapping_rentals and not overlapping_maintenance
+    
+    def save(self, *args, **kwargs):
+        """Override save to auto-translate description to English and French"""
+        # If description changed and is not empty, translate it
+        if self.description and self.description.strip():
+            try:
+                # Check if we need to translate
+                needs_translation = (
+                    not self.pk or  # New object
+                    not self.description_en or 
+                    not self.description_fr
+                )
+                
+                if needs_translation:
+                    try:
+                        from deep_translator import GoogleTranslator
+                        
+                        # Translate to English
+                        if not self.description_en:
+                            try:
+                                translated_en = GoogleTranslator(source='pt', target='en').translate(self.description)
+                                self.description_en = translated_en
+                            except Exception:
+                                self.description_en = f"[EN] {self.description}"
+                        
+                        # Translate to French
+                        if not self.description_fr:
+                            try:
+                                translated_fr = GoogleTranslator(source='pt', target='fr').translate(self.description)
+                                self.description_fr = translated_fr
+                            except Exception:
+                                self.description_fr = f"[FR] {self.description}"
+                                
+                    except ImportError:
+                        # If deep-translator is not available, use placeholders
+                        if not self.description_en:
+                            self.description_en = f"[EN] {self.description}"
+                        if not self.description_fr:
+                            self.description_fr = f"[FR] {self.description}"
+                        
+            except Exception:
+                # If any error, use placeholders
+                if not self.description_en:
+                    self.description_en = f"[EN] {self.description}"
+                if not self.description_fr:
+                    self.description_fr = f"[FR] {self.description}"
+        
+        super().save(*args, **kwargs)
 
 
 class Customer(models.Model):
@@ -360,6 +416,17 @@ class Rental(models.Model):
         ('completed', _('Concluído')),
         ('cancelled', _('Cancelado')),
     ]
+
+    FUEL_LEVEL_CHOICES = [
+        ('empty', 'Empty'), ('quarter', '1/4'), ('half', '1/2'), 
+        ('three_quarter', '3/4'), ('full', 'Full')
+    ]
+    
+    CURRENCY_CHOICES = [
+        ('CVE', 'Cabo Verde Escudo (CVE)'),
+        ('EUR', 'Euro (EUR)'),
+        ('USD', 'US Dollar (USD)'),
+    ]
     
     # Relationships
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='rentals')
@@ -369,6 +436,14 @@ class Rental(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     actual_return_date = models.DateTimeField(null=True, blank=True)
+    
+    # Currency
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default='CVE',
+        help_text=_("Moeda utilizada no aluguer")
+    )
     
     # Pricing
     daily_rate = models.DecimalField(
@@ -451,19 +526,19 @@ class Rental(models.Model):
     mileage_end = models.PositiveIntegerField(null=True, blank=True)
     fuel_level_start = models.CharField(
         max_length=20,
-        choices=[('empty', 'Empty'), ('quarter', '1/4'), ('half', '1/2'), ('three_quarter', '3/4'), ('full', 'Full')],
+        choices=FUEL_LEVEL_CHOICES,
         default='full'
     )
     fuel_level_end = models.CharField(
         max_length=20,
-        choices=[('empty', 'Empty'), ('quarter', '1/4'), ('half', '1/2'), ('three_quarter', '3/4'), ('full', 'Full')],
+        choices=FUEL_LEVEL_CHOICES,
         null=True, blank=True
     )
     
     # Status and notes
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     notes = models.TextField(blank=True, null=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -511,11 +586,11 @@ class Rental(models.Model):
                 self.commission_percent = None
                 self.commission_amount = None
                 
-            # Subtotal is base amount minus commission
-            self.subtotal = base_amount - commission
+            # Subtotal is base amount plus commission
+            self.subtotal = base_amount + commission
             
             # Total amount includes additional fees
-            self.total_amount = (
+            total = (
                 self.subtotal + 
                 (self.insurance_fee or 0) + 
                 (self.late_return_fee or 0) + 
@@ -523,6 +598,7 @@ class Rental(models.Model):
                 self.driver_fee +
                 self.car_seat_fee
             )
+            self.total_amount = total
         
         super().save(*args, **kwargs)
     
@@ -998,6 +1074,175 @@ class VehiclePhoto(models.Model):
                 return f"{size:.1f} {unit}"
             size /= 1024.0
         return f"{size:.1f} TB"
+
+
+class SystemConfiguration(models.Model):
+    """System configuration for rates and settings - Singleton model"""
+    
+    # Service rates - Choose either percentage or fixed amount
+    service_fee_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))],
+        help_text=_("Taxa de serviço em percentual (0-100%). Deixar vazio se usar valor fixo.")
+    )
+    
+    service_fee_amount = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text=_("Taxa de serviço em valor fixo (CVE). Deixar vazio se usar percentual.")
+    )
+    
+    # Daily rates for additional services
+    driver_daily_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal('3000.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text=_("Valor diário para motorista em CVE")
+    )
+    
+    car_seat_daily_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal('500.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text=_("Valor diário para assento de criança em CVE")
+    )
+    
+    # Exchange rates
+    euro_exchange_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        default=Decimal('110.2650'),
+        validators=[MinValueValidator(Decimal('0.0001'))],
+        help_text=_("Taxa de câmbio EUR/CVE")
+    )
+    
+    usd_exchange_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        default=Decimal('101.0000'),
+        validators=[MinValueValidator(Decimal('0.0001'))],
+        help_text=_("Taxa de câmbio USD/CVE")
+    )
+    
+    # Metadata
+    last_updated = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text=_("Último usuário que atualizou as configurações")
+    )
+    
+    class Meta:
+        verbose_name = _("Configuração do Sistema")
+        verbose_name_plural = _("Configurações do Sistema")
+    
+    def __str__(self):
+        return f"Configurações do Sistema (atualizado em {self.last_updated.strftime('%d/%m/%Y %H:%M')})"
+    
+    def save(self, *args, **kwargs):
+        # Validate that only one service fee type is set
+        if self.service_fee_percentage is not None and self.service_fee_amount is not None:
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Defina apenas taxa percentual OU valor fixo, não ambos.")
+        
+        # Set default if both are None
+        if self.service_fee_percentage is None and self.service_fee_amount is None:
+            self.service_fee_percentage = Decimal('10.00')  # Default 10%
+        
+        # Ensure only one instance exists (Singleton pattern)
+        if not self.pk and SystemConfiguration.objects.exists():
+            # If trying to create a new instance and one already exists, update the existing one
+            existing = SystemConfiguration.objects.first()
+            existing.service_fee_percentage = self.service_fee_percentage
+            existing.service_fee_amount = self.service_fee_amount
+            existing.driver_daily_rate = self.driver_daily_rate
+            existing.car_seat_daily_rate = self.car_seat_daily_rate
+            existing.euro_exchange_rate = self.euro_exchange_rate
+            existing.usd_exchange_rate = self.usd_exchange_rate
+            existing.updated_by = self.updated_by
+            existing.save()
+            return
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_instance(cls):
+        """Get or create the singleton instance"""
+        instance, created = cls.objects.get_or_create(pk=1)
+        return instance
+    
+    def calculate_service_fee(self, subtotal_amount):
+        """Calculate service fee based on configuration (percentage or fixed amount)"""
+        if self.service_fee_amount is not None:
+            # Fixed amount fee
+            return self.service_fee_amount
+        elif self.service_fee_percentage is not None:
+            # Percentage fee
+            return subtotal_amount * (self.service_fee_percentage / 100)
+        else:
+            # Fallback to default 10%
+            return subtotal_amount * Decimal('0.10')
+    
+    @property
+    def service_fee_type(self):
+        """Return the type of service fee configured"""
+        if self.service_fee_amount is not None:
+            return 'fixed'
+        elif self.service_fee_percentage is not None:
+            return 'percentage'
+        else:
+            return 'percentage'  # Default
+    
+    @property
+    def driver_rate_eur(self):
+        """Get driver daily rate in EUR"""
+        return round(self.driver_daily_rate / self.euro_exchange_rate, 2)
+    
+    @property
+    def driver_rate_usd(self):
+        """Get driver daily rate in USD"""
+        return round(self.driver_daily_rate / self.usd_exchange_rate, 2)
+    
+    @property
+    def car_seat_rate_eur(self):
+        """Get car seat daily rate in EUR"""
+        return round(self.car_seat_daily_rate / self.euro_exchange_rate, 2)
+    
+    @property
+    def car_seat_rate_usd(self):
+        """Get car seat daily rate in USD"""
+        return round(self.car_seat_daily_rate / self.usd_exchange_rate, 2)
+
+    @property
+    def service_fee_eur(self):
+        """Get service fee in EUR based on current configuration"""
+        if self.service_fee_type == 'fixed':
+            return round(self.service_fee_amount / self.euro_exchange_rate, 2)
+        elif self.service_fee_type == 'percentage':
+            # This would require a subtotal amount to calculate, so we return None here
+            return None
+        else:
+            return None
+
+    @property
+    def service_fee_usd(self):
+        """Get service fee in USD based on current configuration"""
+        if self.service_fee_type == 'fixed':
+            return round(self.service_fee_amount / self.usd_exchange_rate, 2)
+        elif self.service_fee_type == 'percentage':
+            # This would require a subtotal amount to calculate, so we return None here
+            return None
+        else:
+            return None
 
 
 

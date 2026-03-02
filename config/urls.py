@@ -44,6 +44,9 @@ urlpatterns = [
     path('vehicle-rental/', include('apps.vehicle_rental.urls')),
     path("", include('admin_datta.urls')),
     path("admin/", admin.site.urls),
+
+    # API endpoints - Direct access
+    path('api/', include('apps.vehicle_rental.urls')),
     
     # Authentication endpoints
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),

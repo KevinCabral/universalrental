@@ -30,16 +30,24 @@ def update_rental_calculations(sender, instance, **kwargs):
                 # No commission - clear both fields
                 instance.commission_percent = None
                 instance.commission_amount = None
-                
-            # Subtotal is base amount minus commission
-            instance.subtotal = base_amount - commission
+
+            # Calculate additional service fees
+            driver_fee = 3000 * instance.number_of_days if instance.driver else 0
+            car_seat_fee = 500 * instance.number_of_days if instance.car_seat else 0
+            instance.driver_fee = driver_fee
+            instance.car_seat_fee = car_seat_fee
+            
+            # Subtotal is base amount plus commission
+            instance.subtotal = base_amount + commission
             
             # Total amount includes additional fees
             instance.total_amount = (
                 instance.subtotal + 
                 (instance.insurance_fee or 0) + 
                 (instance.late_return_fee or 0) + 
-                (instance.damage_fee or 0)
+                (instance.damage_fee or 0) +
+                driver_fee +
+                car_seat_fee
             )
 
 
