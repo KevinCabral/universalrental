@@ -8,11 +8,14 @@ app_name = 'vehicle_rental'
 router = DefaultRouter()
 router.register(r'vehicles', views.VehicleViewSet)
 router.register(r'customers', views.CustomerViewSet)
+router.register(r'vehicle-brands', views.VehicleBrandViewSet)
+router.register(r'delivery-locations', views.DeliveryLocationViewSet)
 router.register(r'rentals', views.RentalViewSet)
 router.register(r'expenses', views.ExpenseViewSet)
 router.register(r'maintenance', views.MaintenanceRecordViewSet)
 router.register(r'evaluations', views.RentalEvaluationViewSet)
 router.register(r'vehicle-photos', views.VehiclePhotoViewSet)
+router.register(r'system-config', views.SystemConfigurationViewSet, basename='system-config')
 
 # Customer-facing API Router
 customer_router = DefaultRouter()
@@ -20,11 +23,14 @@ customer_router.register(r'register', views.CustomerRegistrationViewSet, basenam
 customer_router.register(r'rentals', views.CustomerRentalViewSet, basename='customer-rentals')
 customer_router.register(r'evaluations', views.CustomerRentalEvaluationViewSet, basename='customer-evaluations')
 customer_router.register(r'vehicles', views.VehicleAvailabilityViewSet, basename='customer-vehicles')
+customer_router.register(r'vehicle-brands', views.VehicleBrandViewSet, basename='customer-vehicle-brands')
+customer_router.register(r'delivery-locations', views.DeliveryLocationViewSet, basename='customer-delivery-locations')
 
 urlpatterns = [
     # Dashboard and main views
     path('', views.dashboard, name='dashboard'),
     path('vehicles/', views.vehicle_list, name='vehicle_list'),
+    path('vehicles/calendar/', views.rental_calendar, name='rental_calendar'),
     path('vehicles/create/', views.vehicle_create, name='vehicle_create'),
     path('vehicles/<int:pk>/', views.vehicle_detail, name='vehicle_detail'),
     path('vehicles/<int:pk>/edit/', views.vehicle_edit, name='vehicle_edit'),
@@ -61,7 +67,13 @@ urlpatterns = [
     
     # Customer-facing API endpoints
     path('api/customer/login/', views.customer_login, name='customer_login'),
+    path('api/customer/change-password/', views.change_password, name='customer_change_password'),
+    path('api/customer/request-password-reset/', views.request_password_reset, name='request_password_reset'),
+    path('api/customer/reset-password/', views.reset_password, name='reset_password'),
     path('api/customer/', include(customer_router.urls)),
+    
+    # Public API endpoints (no authentication required)
+    path('api/public/system-config/', views.SystemConfigurationAPIView.as_view(), name='system_configuration_api'),
     
     # AJAX endpoints
     path('ajax/vehicle-availability/', views.check_vehicle_availability, name='check_vehicle_availability'),

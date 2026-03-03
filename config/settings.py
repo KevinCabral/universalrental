@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'Super_Secr3t_9999')
 
 # Enable/Disable DEBUG Mode
-DEBUG = str2bool(os.environ.get('DEBUG'))
+DEBUG = str2bool(os.environ.get('DEBUG', 'True'))
 #print(' DEBUG -> ' + str(DEBUG) ) 
 
 ALLOWED_HOSTS = ['*']
@@ -197,7 +197,20 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'  # Redirect to login page when login required
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# EMAIL CONFIGURATION
+# Para desenvolvimento (emails no console) descomente a linha abaixo:
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Para enviar emails reais (Gmail - substitua com suas credenciais):
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'adylsonrtb08@gmail.com'  # Substitua pelo seu email
+EMAIL_HOST_PASSWORD = 'quik juts iqfx inxk'  # Substitua pela senha de app do Gmail
+DEFAULT_FROM_EMAIL = 'adylsonrtb08@gmail.com'
+EMAIL_TIMEOUT = 10
 
 # ### DYNAMIC_DATATB Settings ###
 DYNAMIC_DATATB = {

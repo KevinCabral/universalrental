@@ -4,8 +4,42 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
     VehicleBrand, Vehicle, Customer, Rental, 
-    ExpenseCategory, Expense, MaintenanceRecord, RentalPhoto, RentalEvaluation
+    ExpenseCategory, Expense, MaintenanceRecord, RentalPhoto, RentalEvaluation, DeliveryLocation,
+    SystemConfiguration
 )
+
+
+@admin.register(DeliveryLocation)
+class DeliveryLocationAdmin(admin.ModelAdmin):
+    list_display = [
+        'name', 'location_type', 'is_active', 
+        'default_pickup', 'default_return', 'created_at'
+    ]
+    list_filter = ['location_type', 'is_active', 'default_pickup', 'default_return']
+    search_fields = ['name', 'address', 'description']
+    list_editable = ['is_active', 'default_pickup', 'default_return']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('name', 'address', 'location_type')
+        }),
+        ('Configurações', {
+            'fields': ('is_active', 'default_pickup', 'default_return')
+        }),
+        ('Descrição', {
+            'fields': ('description',)
+        }),
+        ('Metadados', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Creating new object
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(VehicleBrand)
@@ -34,7 +68,7 @@ class VehicleAdmin(admin.ModelAdmin):
         'model', 'color'
     ]
     list_editable = ['status', 'daily_rate', 'is_active']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['description_en', 'description_fr', 'created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
@@ -48,6 +82,10 @@ class VehicleAdmin(admin.ModelAdmin):
         }),
         ('Features', {
             'fields': ('panoramic_roof', 'air_conditioning')
+        }),
+        ('Description', {
+            'fields': ('description', 'description_en', 'description_fr'),
+            'description': 'Enter description in Portuguese. English and French translations will be generated automatically.'
         }),
         ('Operational Data', {
             'fields': ('mileage', 'purchase_price', 'date_of_purchase', 'daily_rate')
@@ -68,10 +106,10 @@ class VehicleAdmin(admin.ModelAdmin):
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = [
-        'full_name', 'email', 'phone_number', 'id_number',
-        'license_expiry_date', 'rental_count', 'is_blacklisted'
+        'full_name', 'email', 'phone_number', 'birth_date', 'id_number',
+        'license_issue_date', 'license_expiry_date', 'rental_count', 'is_blacklisted'
     ]
-    list_filter = ['is_blacklisted', 'country', 'license_expiry_date']
+    list_filter = ['is_blacklisted', 'country', 'birth_date', 'license_issue_date', 'license_expiry_date']
     search_fields = [
         'first_name', 'last_name', 'email', 'phone_number', 
         'id_number', 'driving_license_number'
@@ -81,13 +119,13 @@ class CustomerAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Personal Information', {
-            'fields': ('first_name', 'last_name', 'email', 'phone_number')
+            'fields': ('first_name', 'last_name', 'email', 'phone_number', 'birth_date')
         }),
         ('Address', {
             'fields': ('address_line_1', 'address_line_2', 'city', 'postal_code', 'country')
         }),
         ('Identification', {
-            'fields': ('id_number', 'driving_license_number', 'license_expiry_date')
+            'fields': ('id_number', 'driving_license_number', 'license_issue_date', 'license_expiry_date')
         }),
         ('Status', {
             'fields': ('is_blacklisted', 'blacklist_reason')
@@ -127,7 +165,8 @@ class RentalAdmin(admin.ModelAdmin):
         'status', 'total_amount', 'days_remaining'
     ]
     list_filter = [
-        'status', 'start_date', 'end_date', 'vehicle__brand'
+        'status', 'start_date', 'end_date', 'vehicle__brand',
+        'driver', 'car_seat'
     ]
     search_fields = [
         'customer__first_name', 'customer__last_name',
@@ -136,7 +175,7 @@ class RentalAdmin(admin.ModelAdmin):
     list_editable = ['status']
     readonly_fields = [
         'number_of_days', 'subtotal', 'commission_amount', 
-        'total_amount', 'created_at', 'updated_at'
+        'driver_fee', 'car_seat_fee', 'total_amount', 'created_at', 'updated_at'
     ]
     inlines = [RentalPhotoInline]
     
@@ -150,6 +189,9 @@ class RentalAdmin(admin.ModelAdmin):
                 'commission_percent', 'commission_amount'
             )
         }),
+        ('Service Fees', {
+            'fields': ('driver_fee', 'car_seat_fee')
+        }),
         ('Additional Charges', {
             'fields': ('insurance_fee', 'security_deposit', 'late_return_fee', 'damage_fee')
         }),
@@ -161,6 +203,12 @@ class RentalAdmin(admin.ModelAdmin):
                 'mileage_start', 'mileage_end',
                 'fuel_level_start', 'fuel_level_end'
             )
+        }),
+        ('Additional Requirements', {
+            'fields': ('driver', 'car_seat')
+        }),
+        ('Locations', {
+            'fields': ('pickup_location', 'return_location')
         }),
         ('Status & Notes', {
             'fields': ('status', 'notes')
@@ -385,6 +433,70 @@ class RentalEvaluationAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'rental__customer', 'rental__vehicle__brand'
         )
+
+
+@admin.register(SystemConfiguration)
+class SystemConfigurationAdmin(admin.ModelAdmin):
+    list_display = [
+        'get_title', 'get_service_fee_display', 'driver_daily_rate', 'car_seat_daily_rate',
+        'euro_exchange_rate', 'usd_exchange_rate', 'last_updated'
+    ]
+    readonly_fields = ['last_updated', 'get_service_fee_type']
+    
+    fieldsets = (
+        ('Taxa de Serviço', {
+            'fields': ('get_service_fee_type', 'service_fee_percentage', 'service_fee_amount'),
+            'description': 'Configure a taxa de serviço aplicada aos aluguéis (percentual OU valor fixo)'
+        }),
+        ('Valores Diários dos Serviços Adicionais', {
+            'fields': ('driver_daily_rate', 'car_seat_daily_rate'),
+            'description': 'Valores em CVE para serviços adicionais por dia'
+        }),
+        ('Taxas de Câmbio', {
+            'fields': ('euro_exchange_rate', 'usd_exchange_rate'),
+            'description': 'Taxas de conversão para EUR e USD (1 EUR/USD = X CVE)'
+        }),
+        ('Metadados', {
+            'fields': ('last_updated', 'updated_by'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_title(self, obj):
+        return "Configurações do Sistema"
+    get_title.short_description = 'Configuração'
+    
+    def get_service_fee_display(self, obj):
+        """Display the service fee configuration"""
+        if obj.service_fee_amount is not None:
+            return f"{obj.service_fee_amount} CVE (fixo)"
+        elif obj.service_fee_percentage is not None:
+            return f"{obj.service_fee_percentage}% (percentual)"
+        else:
+            return "10% (padrão)"
+    get_service_fee_display.short_description = 'Taxa de Serviço'
+    
+    def get_service_fee_type(self, obj):
+        """Display current service fee type"""
+        if obj.service_fee_amount is not None:
+            return "Valor Fixo"
+        elif obj.service_fee_percentage is not None:
+            return "Percentual"
+        else:
+            return "Percentual (padrão)"
+    get_service_fee_type.short_description = 'Tipo de Taxa'
+    
+    def has_add_permission(self, request):
+        # Only allow adding if no configuration exists
+        return not SystemConfiguration.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Never allow deletion of system configuration
+        return False
+    
+    def save_model(self, request, obj, form, change):
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 # Custom admin site configuration

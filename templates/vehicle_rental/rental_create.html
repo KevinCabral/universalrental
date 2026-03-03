@@ -200,7 +200,8 @@
                 <div class="col-md-3">
                   <div class="form-group">
                     <label class="form-label">Valor Total (ECV)</label>
-                    <input type="text" id="total" class="form-control" readonly placeholder="Calculado automaticamente">
+                    <input type="text" id="total" class="form-control" readonly placeholder="Calculado automaticamente" style="background-color: #f8f9fa; font-weight: bold; color: #28a745;">
+                    <small class="form-text text-muted">Inclui taxas de serviços adicionais</small>
                   </div>
                 </div>
               </div>
@@ -253,6 +254,94 @@
                         {% endfor %}
                       </div>
                     {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Additional Requirements Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="settings" class="me-2"></i>
+                    Requisitos Adicionais
+                  </h6>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.driver }}
+                      <label class="form-check-label" for="{{ form.driver.id_for_label }}">
+                        {{ form.driver.label }}
+                      </label>
+                    </div>
+                    {% if form.driver.errors %}
+                      <div class="text-danger">
+                        {% for error in form.driver.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Marque se o cliente necessita de um motorista profissional</small>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <div class="form-check">
+                      {{ form.car_seat }}
+                      <label class="form-check-label" for="{{ form.car_seat.id_for_label }}">
+                        {{ form.car_seat.label }}
+                      </label>
+                    </div>
+                    {% if form.car_seat.errors %}
+                      <div class="text-danger">
+                        {% for error in form.car_seat.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">Marque se é necessário um assento de criança</small>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Pickup and Return Locations Section -->
+              <div class="row">
+                <div class="col-12">
+                  <h6 class="mb-3 mt-4">
+                    <i data-feather="map-pin" class="me-2"></i>
+                    Locais de Entrega e Devolução
+                  </h6>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.pickup_location_choice.id_for_label }}" class="form-label">{{ form.pickup_location_choice.label }}</label>
+                    {{ form.pickup_location_choice }}
+                    {% if form.pickup_location_choice.errors %}
+                      <div class="text-danger">
+                        {% for error in form.pickup_location_choice.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">{{ form.pickup_location_choice.help_text }}</small>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="{{ form.return_location_choice.id_for_label }}" class="form-label">{{ form.return_location_choice.label }}</label>
+                    {{ form.return_location_choice }}
+                    {% if form.return_location_choice.errors %}
+                      <div class="text-danger">
+                        {% for error in form.return_location_choice.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    <small class="form-text text-muted">{{ form.return_location_choice.help_text }}</small>
                   </div>
                 </div>
               </div>
@@ -328,6 +417,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const dailyRateInput = document.getElementById('id_daily_rate');
     const commissionRateInput = document.getElementById('id_commission_percent');
     const commissionAmountInput = document.getElementById('id_commission_amount');
+    const driverCheckbox = document.getElementById('id_driver');
+    const carSeatCheckbox = document.getElementById('id_car_seat');
     const durationInput = document.getElementById('duration');
     const totalInput = document.getElementById('total');
     
@@ -337,6 +428,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const dailyRate = parseFloat(dailyRateInput.value) || 0;
         const commissionRate = parseFloat(commissionRateInput.value) || 0;
         const commissionAmount = parseFloat(commissionAmountInput.value) || 0;
+        const needsDriver = driverCheckbox ? driverCheckbox.checked : false;
+        const needsCarSeat = carSeatCheckbox ? carSeatCheckbox.checked : false;
         
         if (startDate && endDate && dailyRate) {
             const start = new Date(startDate);
@@ -357,9 +450,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     commission = commissionAmount;
                 }
                 
-                const total = subtotal - commission; // Commission decreases the total
+                // Calculate additional service fees
+                const driverFee = needsDriver ? (daysDiff * 3000) : 0;
+                const carSeatFee = needsCarSeat ? (daysDiff * 500) : 0;
                 
-                totalInput.value = total.toFixed(2) + ' ECV';
+                const total = subtotal - commission + driverFee + carSeatFee; // Commission decreases, services increase
+                
+                // Format total with breakdown
+                let breakdown = `${total.toFixed(2)} ECV`;
+                if (driverFee > 0 || carSeatFee > 0) {
+                    let extras = [];
+                    if (driverFee > 0) extras.push(`Motorista: ${driverFee.toFixed(2)}`);
+                    if (carSeatFee > 0) extras.push(`Assento: ${carSeatFee.toFixed(2)}`);
+                    breakdown += ` (+ ${extras.join(', ')})`;
+                }
+                
+                totalInput.value = breakdown;
             } else {
                 durationInput.value = 'Datas inválidas';
                 totalInput.value = '';
@@ -386,6 +492,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (startDateInput) startDateInput.addEventListener('change', calculateTotals);
     if (endDateInput) endDateInput.addEventListener('change', calculateTotals);
     if (dailyRateInput) dailyRateInput.addEventListener('change', calculateTotals);
+    if (driverCheckbox) driverCheckbox.addEventListener('change', calculateTotals);
+    if (carSeatCheckbox) carSeatCheckbox.addEventListener('change', calculateTotals);
     
     // Commission percentage field - clear amount field when typing
     if (commissionRateInput) {

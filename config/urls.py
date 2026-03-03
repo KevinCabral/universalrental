@@ -44,6 +44,9 @@ urlpatterns = [
     path('vehicle-rental/', include('apps.vehicle_rental.urls')),
     path("", include('admin_datta.urls')),
     path("admin/", admin.site.urls),
+
+    # API endpoints - Direct access
+    path('api/', include('apps.vehicle_rental.urls')),
     
     # Authentication endpoints
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
@@ -55,6 +58,11 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
 
+# Serve media files during development (must be before other URL patterns)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
 # Lazy-load on routing is needed
 # During the first build, API is not yet generated
 try:
@@ -62,8 +70,3 @@ try:
     urlpatterns.append( path("login/jwt/", view=obtain_auth_token) )
 except:
     pass
-
-# Serve media files during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

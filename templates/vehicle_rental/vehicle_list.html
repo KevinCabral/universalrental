@@ -32,6 +32,9 @@
           Filtrar Veículos
         </h5>
         <div class="card-header-right">
+          <a href="{% url 'vehicle_rental:rental_calendar' %}" class="btn btn-primary me-2">
+            <i class="fas fa-calendar-alt me-2"></i> Calendário de Aluguéis
+          </a>
           <a href="{% url 'vehicle_rental:vehicle_create' %}" class="btn btn-success">
             <i class="fas fa-plus me-2"></i> Adicionar Veículo
           </a>

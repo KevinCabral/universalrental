@@ -8,21 +8,29 @@ from django.db.models import Q, Sum, Count, Avg
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string
+from django.conf import settings
 from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
-from .models import Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand, ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto
+from .models import (
+    Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand, 
+    ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto, DeliveryLocation,
+    SystemConfiguration
+)
 from .forms import VehicleForm, CustomerForm, RentalForm
 from .serializers import (
     VehicleSerializer, CustomerSerializer, RentalSerializer,
-    ExpenseSerializer, MaintenanceRecordSerializer, RentalEvaluationSerializer, VehiclePhotoSerializer
+    ExpenseSerializer, MaintenanceRecordSerializer, RentalEvaluationSerializer, VehiclePhotoSerializer,
+    VehicleBrandSerializer, ChangePasswordSerializer, DeliveryLocationSerializer, SystemConfigurationSerializer
 )
 from .forms import VehicleForm, CustomerForm, RentalForm, ExpenseForm, MaintenanceRecordForm, RentalStartPhotosFormSet, RentalReturnPhotosFormSet
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal
 import json
+import calendar
 
 
 # Dashboard and Main Views
@@ -121,6 +129,110 @@ def vehicle_list(request):
     }
     
     return render(request, 'vehicle_rental/vehicle_list.html', context)
+
+
+@login_required
+def rental_calendar(request):
+    """Calendar view showing confirmed and pending rentals with vehicle/month filters"""
+    
+    # Get filter parameters
+    vehicle_filter = request.GET.get('vehicle')
+    year = request.GET.get('year', datetime.now().year)
+    month = request.GET.get('month', datetime.now().month)
+    
+    try:
+        year = int(year)
+        month = int(month)
+    except (ValueError, TypeError):
+        year = datetime.now().year
+        month = datetime.now().month
+    
+    # Get confirmed and pending rentals for the month
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    
+    # Filter rentals
+    rentals = Rental.objects.filter(
+        status__in=['confirmed', 'pending'],
+        start_date__lte=end_date,
+        end_date__gte=start_date
+    ).select_related('vehicle', 'customer').order_by('start_date')
+    
+    if vehicle_filter and vehicle_filter != '':
+        rentals = rentals.filter(vehicle_id=vehicle_filter)
+    
+    # Build calendar data
+    cal = calendar.Calendar()
+    month_days = list(cal.itermonthdays(year, month))
+    
+    # Group rentals by date
+    rental_dict = {}
+    for rental in rentals:
+        # Convert datetime to date for comparison
+        rental_start = rental.start_date.date() if hasattr(rental.start_date, 'date') else rental.start_date
+        rental_end = rental.end_date.date() if hasattr(rental.end_date, 'date') else rental.end_date
+        
+        current_date = rental_start
+        while current_date <= rental_end:
+            if start_date <= current_date <= end_date:
+                if current_date not in rental_dict:
+                    rental_dict[current_date] = []
+                rental_dict[current_date].append(rental)
+            current_date += timedelta(days=1)
+    
+    # Create calendar structure
+    weeks = []
+    week = []
+    
+    for day in month_days:
+        if day == 0:
+            week.append(None)
+        else:
+            day_date = date(year, month, day)
+            day_rentals = rental_dict.get(day_date, [])
+            week.append({
+                'day': day,
+                'date': day_date,
+                'rentals': day_rentals,
+                'has_confirmed': any(r.status == 'confirmed' for r in day_rentals),
+                'has_pending': any(r.status == 'pending' for r in day_rentals)
+            })
+        
+        if len(week) == 7:
+            weeks.append(week)
+            week = []
+    
+    if week:
+        weeks.append(week)
+    
+    # Navigation dates
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+    
+    # Filter options
+    vehicles = Vehicle.objects.filter(is_active=True).order_by('brand__name', 'model')
+    month_name = calendar.month_name[month]
+    
+    context = {
+        'weeks': weeks,
+        'current_year': year,
+        'current_month': month,
+        'current_month_name': month_name,
+        'prev_year': prev_year,
+        'prev_month': prev_month,
+        'next_year': next_year,
+        'next_month': next_month,
+        'vehicles': vehicles,
+        'current_vehicle': vehicle_filter,
+        'rentals': rentals
+    }
+    
+    return render(request, 'vehicle_rental/rental_calendar.html', context)
 
 
 @login_required
@@ -2022,6 +2134,115 @@ class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
 
 
+class VehicleBrandViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing vehicle brands"""
+    queryset = VehicleBrand.objects.all().order_by('name')
+    serializer_class = VehicleBrandSerializer
+
+
+class DeliveryLocationViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing delivery/return locations"""
+    queryset = DeliveryLocation.objects.filter(is_active=True).order_by('name')
+    serializer_class = DeliveryLocationSerializer
+    permission_classes = [AllowAny]  # No authentication required for location access
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        location_type = self.request.query_params.get('location_type', None)
+        
+        if location_type in ['pickup', 'return', 'both']:
+            if location_type == 'pickup':
+                queryset = queryset.filter(location_type__in=['pickup', 'both'])
+            elif location_type == 'return':
+                queryset = queryset.filter(location_type__in=['return', 'both'])
+            else:
+                queryset = queryset.filter(location_type=location_type)
+        
+        return queryset
+    
+    @action(detail=False, methods=['get'])
+    def defaults(self, request):
+        """Get default pickup and return locations"""
+        pickup_default = self.get_queryset().filter(
+            default_pickup=True,
+            location_type__in=['pickup', 'both']
+        ).first()
+        return_default = self.get_queryset().filter(
+            default_return=True,
+            location_type__in=['return', 'both']  
+        ).first()
+        
+        return Response({
+            'pickup_default': DeliveryLocationSerializer(pickup_default).data if pickup_default else None,
+            'return_default': DeliveryLocationSerializer(return_default).data if return_default else None,
+        })
+    
+    def perform_create(self, serializer):
+        # Only set created_by if user is authenticated
+        if self.request.user.is_authenticated:
+            serializer.save(created_by=self.request.user)
+        else:
+            serializer.save()
+    
+    def list(self, request, *args, **kwargs):
+        """List all vehicle brands with optional filtering and stats"""
+        queryset = self.get_queryset()
+        
+        # Optional filtering by name
+        search = request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(name__icontains=search)
+        
+        # Optional filtering by country
+        country = request.query_params.get('country', None)
+        if country:
+            queryset = queryset.filter(country_of_origin__icontains=country)
+        
+        # Add vehicle count if requested
+        include_stats = request.query_params.get('include_stats', 'false').lower() == 'true'
+        
+        if include_stats:
+            from django.db.models import Count
+            queryset = queryset.annotate(
+                vehicle_count=Count('vehicles', filter=Q(vehicles__is_active=True)),
+                active_vehicle_count=Count('vehicles', filter=Q(vehicles__is_active=True, vehicles__status='available'))
+            )
+        
+        serializer = self.get_serializer(queryset, many=True)
+        
+        # Add stats to serialized data if requested
+        if include_stats:
+            data = []
+            for i, brand in enumerate(queryset):
+                brand_data = serializer.data[i].copy()
+                brand_data['vehicle_count'] = brand.vehicle_count
+                brand_data['active_vehicle_count'] = brand.active_vehicle_count
+                data.append(brand_data)
+            return Response(data)
+        else:
+            return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def vehicles(self, request, pk=None):
+        """Get all vehicles for a specific brand"""
+        brand = self.get_object()
+        vehicles = Vehicle.objects.filter(brand=brand, is_active=True).select_related('brand')
+        
+        # Optional status filtering
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            vehicles = vehicles.filter(status=status_filter)
+        
+        from .serializers import VehicleSerializer
+        serializer = VehicleSerializer(vehicles, many=True, context={'request': request})
+        
+        return Response({
+            'brand': VehicleBrandSerializer(brand).data,
+            'vehicles': serializer.data,
+            'total_vehicles': vehicles.count()
+        })
+
+
 class RentalViewSet(viewsets.ModelViewSet):
     queryset = Rental.objects.select_related('customer', 'vehicle')
     serializer_class = RentalSerializer
@@ -2699,8 +2920,19 @@ class CustomerRegistrationViewSet(viewsets.GenericViewSet):
     
     def create(self, request):
         """Register a new customer"""
+
+        print("Received registration data:", request.data)  # Debug statement
         from .serializers import CustomerRegistrationSerializer
         serializer = CustomerRegistrationSerializer(data=request.data)
+
+        print("Serializer created, checking validity...")  # Debug statement
+        is_valid = serializer.is_valid()
+        print("Serializer valid:", is_valid)  # Debug statement
+        
+        if not is_valid:
+            print("Serializer errors:", serializer.errors)  # Debug statement
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
         if serializer.is_valid():
             customer = serializer.save()
             from .serializers import CustomerDetailSerializer
@@ -3010,3 +3242,285 @@ def customer_login(request):
         'customer': customer_serializer.data,
         'message': 'Login successful'
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change customer password by customer ID
+    
+    Required fields: customer_id, current_password, new_password, confirm_password
+    
+    Example request:
+    {
+        "customer_id": 1,
+        "current_password": "oldpassword123",
+        "new_password": "newpassword456", 
+        "confirm_password": "newpassword456"
+    }
+    """
+    serializer = ChangePasswordSerializer(data=request.data)
+    
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    validated_data = serializer.validated_data
+    customer = validated_data['customer']
+    new_password = validated_data['new_password']
+    
+    # Change password
+    customer.user.set_password(new_password)
+    customer.user.save()
+    
+    return Response({
+        'message': 'Password changed successfully',
+        'customer_id': customer.id,
+        'customer_name': customer.full_name
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    """
+    Request password reset by sending OTP to email
+    
+    POST /vehicle-rental/api/customer/request-password-reset/
+    Body: {
+        "email": "customer@example.com"
+    }
+    
+    Returns: {
+        "message": "OTP sent to your email",
+        "email": "customer@example.com"
+    }
+    """
+    from django.contrib.auth.models import User
+    from django.core.mail import send_mail
+    from django.conf import settings
+    import random
+    import string
+    
+    email = request.data.get('email')
+    
+    if not email:
+        return Response({
+            'error': 'Email is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if customer with this email exists
+    try:
+        customer = Customer.objects.get(email=email)
+    except Customer.DoesNotExist:
+        return Response({
+            'error': 'Customer with this email does not exist'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Generate a 6-digit OTP
+    otp = ''.join(random.choices(string.digits, k=6))
+    
+    # Save OTP to customer
+    customer.otp = otp
+    customer.otp_created_at = timezone.now()
+    customer.save()
+    
+    # Send OTP via email
+    try:
+        subject = 'Password Recovery Code - Vehicle Rental System'
+        message = f'''
+Hello {customer.first_name or customer.email},
+
+You have requested a password reset for your account.
+
+Your verification code is: {otp}
+
+This code will expire in 15 minutes for security reasons.
+
+If you did not request this password reset, please ignore this email.
+
+Best regards,
+Vehicle Rental System Team
+        '''
+        
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@vehiclerental.com',
+            recipient_list=[email],
+            fail_silently=False,  # Show email errors for debugging
+        )
+        
+        # Check if we're in development mode (console backend)
+        is_console_backend = getattr(settings, 'EMAIL_BACKEND', '') == 'django.core.mail.backends.console.EmailBackend'
+        
+        return Response({
+            'message': 'OTP sent to your email successfully',
+            'email': email,
+            'dev_mode': is_console_backend,
+            'otp': otp if is_console_backend else None  # Only show OTP in dev mode
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        # Log the specific error for debugging
+        print(f"Email sending failed: {str(e)}")
+        
+        # Check if it's an email configuration issue
+        error_message = str(e).lower()
+        if 'authentication failed' in error_message or 'invalid credentials' in error_message:
+            detailed_error = 'Email authentication failed. Please check Gmail app password configuration.'
+        elif 'connection' in error_message or 'timeout' in error_message:
+            detailed_error = 'Email server connection failed. Please check internet connection.'
+        elif 'smtp' in error_message:
+            detailed_error = 'SMTP configuration error. Please verify email settings.'
+        else:
+            detailed_error = f'Email sending failed: {str(e)[:100]}'
+        
+        # For development/testing - return OTP in error response
+        is_console_backend = getattr(settings, 'EMAIL_BACKEND', '') == 'django.core.mail.backends.console.EmailBackend'
+        
+        # Don't clear OTP immediately - keep it for manual use
+        return Response({
+            'error': detailed_error,
+            'email': email,
+            'dev_otp': otp if settings.DEBUG else None,  # Only in debug mode
+            'suggestion': 'You can temporarily switch to console email backend in settings.py for testing'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    """
+    Reset password using OTP
+    
+    POST /vehicle-rental/api/customer/reset-password/
+    Body: {
+        "email": "customer@example.com",
+        "otp": "123456",
+        "new_password": "newpassword123",
+        "confirm_password": "newpassword123"
+    }
+    
+    Returns: {
+        "message": "Password reset successfully",
+        "email": "customer@example.com"
+    }
+    """
+    from django.contrib.auth.models import User
+    
+    email = request.data.get('email')
+    otp = request.data.get('otp')
+    new_password = request.data.get('new_password')
+    confirm_password = request.data.get('confirm_password')
+    
+    # Validate required fields
+    if not email:
+        return Response({
+            'error': 'Email is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not otp:
+        return Response({
+            'error': 'OTP is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not new_password:
+        return Response({
+            'error': 'New password is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not confirm_password:
+        return Response({
+            'error': 'Password confirmation is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if passwords match
+    if new_password != confirm_password:
+        return Response({
+            'error': 'Passwords do not match'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate password strength (basic validation)
+    if len(new_password) < 8:
+        return Response({
+            'error': 'Password must be at least 8 characters long'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if customer with this email exists
+    try:
+        customer = Customer.objects.get(email=email)
+    except Customer.DoesNotExist:
+        return Response({
+            'error': 'Customer with this email does not exist'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Verify OTP
+    if not customer.otp or customer.otp != otp:
+        return Response({
+            'error': 'Invalid OTP'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if OTP is expired
+    if not customer.is_otp_valid():
+        customer.clear_otp()
+        return Response({
+            'error': 'OTP has expired. Please request a new one.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Reset password (customer must have a user account)
+    if not customer.user:
+        return Response({
+            'error': 'Customer account is not linked to a user. Please contact support.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    customer.user.set_password(new_password)
+    customer.user.save()
+    
+    # Clear OTP after successful password reset
+    customer.clear_otp()
+    
+    return Response({
+        'message': 'Password reset successfully',
+        'email': email
+    }, status=status.HTTP_200_OK)
+
+
+class SystemConfigurationAPIView(APIView):
+    """
+    API view for system configuration/rates 
+    GET: Retrieve current configuration (no authentication required)
+    """
+    permission_classes = []  # No authentication required
+    
+    def get(self, request):
+        """Get current system configuration"""
+        try:
+            config = SystemConfiguration.get_instance()
+            serializer = SystemConfigurationSerializer(config)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'error': 'Failed to retrieve system configuration',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SystemConfigurationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for system configuration/rates - appears in Swagger
+    GET: Retrieve current configuration (no authentication required)
+    """
+    queryset = SystemConfiguration.objects.all()
+    serializer_class = SystemConfigurationSerializer
+    permission_classes = []  # No authentication required
+    
+    def get_object(self):
+        """Always return the singleton instance"""
+        return SystemConfiguration.get_instance()
+    
+    def list(self, request, *args, **kwargs):
+        """Return the singleton configuration"""
+        config = self.get_object()
+        serializer = self.get_serializer(config)
+        return Response(serializer.data)

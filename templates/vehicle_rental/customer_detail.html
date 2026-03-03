@@ -78,7 +78,7 @@
                 <div class="customer-field mb-3">
                   <label class="text-muted small fw-bold text-uppercase">Data de Nascimento</label>
                   <div class="fs-6">
-                    <i class="fas fa-birthday-cake me-2 text-muted"></i>{{ customer.date_of_birth|date:"d/m/Y" }}
+                    <i class="fas fa-birthday-cake me-2 text-muted"></i>{{ customer.birth_date|date:"d/m/Y" }}
                   </div>
                 </div>
 
@@ -160,6 +160,20 @@
                   </div>
                 </div>
               </div>
+              <div class="col-md-6">
+                <div class="customer-field mb-3">
+                  <label class="text-muted small fw-bold text-uppercase">Data de Emissão</label>
+                  <div class="fs-6">
+                    {% if customer.license_issue_date %}
+                      <i class="fas fa-calendar-plus me-2 text-muted"></i>{{ customer.license_issue_date|date:"d/m/Y" }}
+                    {% else %}
+                      <span class="text-muted fst-italic">N/A</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row">
               <div class="col-md-6">
                 <div class="customer-field mb-3">
                   <label class="text-muted small fw-bold text-uppercase">Data de Validade</label>
