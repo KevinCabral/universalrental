@@ -1,9 +1,13 @@
-version: '3.8'
 services:
   appseed-app:
     container_name: appseed_app
     restart: always
+    env_file:
+      - .env
     build: .
+    volumes:
+      - app-db:/app/db
+      - app-media:/app/media
     networks:
       - db_network
       - web_network
@@ -24,4 +28,7 @@ networks:
     driver: bridge
   web_network:
     driver: bridge
+volumes:
+  app-db:
+  app-media:
  
