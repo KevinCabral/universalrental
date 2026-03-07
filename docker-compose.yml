@@ -14,7 +14,7 @@ services:
   nginx:
     container_name: nginx
     restart: always
-    image: "nginx:latest"
+    image: docker.io/library/nginx:latest
     ports:
       - "5085:5085"
     volumes:

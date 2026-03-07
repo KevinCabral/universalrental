@@ -57,6 +57,27 @@ urlpatterns = [
     path('maintenance/<int:pk>/', views.maintenance_detail, name='maintenance_detail'),
     path('maintenance/<int:pk>/edit/', views.maintenance_edit, name='maintenance_edit'),
     
+    # Parameterization – Brands
+    path('brands/', views.brand_list, name='brand_list'),
+    path('brands/create/', views.brand_create, name='brand_create'),
+    path('brands/<int:pk>/edit/', views.brand_edit, name='brand_edit'),
+    path('brands/<int:pk>/delete/', views.brand_delete, name='brand_delete'),
+
+    # Parameterization – Delivery Locations
+    path('locations/', views.location_list, name='location_list'),
+    path('locations/create/', views.location_create, name='location_create'),
+    path('locations/<int:pk>/edit/', views.location_edit, name='location_edit'),
+    path('locations/<int:pk>/delete/', views.location_delete, name='location_delete'),
+
+    # Parameterization – Expense Categories
+    path('expense-categories/', views.expense_category_list, name='expense_category_list'),
+    path('expense-categories/create/', views.expense_category_create, name='expense_category_create'),
+    path('expense-categories/<int:pk>/edit/', views.expense_category_edit, name='expense_category_edit'),
+    path('expense-categories/<int:pk>/delete/', views.expense_category_delete, name='expense_category_delete'),
+
+    # Parameterization – System Configuration
+    path('system-config/', views.system_config_edit, name='system_config'),
+
     # Reports
     path('reports/', views.reports_dashboard, name='reports_dashboard'),
     path('reports/revenue/', views.revenue_report, name='revenue_report'),
