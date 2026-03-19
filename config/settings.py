@@ -48,6 +48,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:5173',   # Vite
     'http://212.47.74.168:5085',  # Your production server
     'https://212.47.74.168:5085', # HTTPS version
+    'https://admin.universalrental.cv',
+    'https://universalrental.cv',
 ]
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
