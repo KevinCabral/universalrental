@@ -27,6 +27,7 @@ from .serializers import (
     VehicleBrandSerializer, ChangePasswordSerializer, DeliveryLocationSerializer, SystemConfigurationSerializer
 )
 from .forms import VehicleForm, CustomerForm, RentalForm, ExpenseForm, MaintenanceRecordForm, RentalStartPhotosFormSet, RentalReturnPhotosFormSet
+from .forms import VehicleBrandForm, DeliveryLocationForm, ExpenseCategoryForm, SystemConfigurationForm
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 import json
@@ -3524,3 +3525,151 @@ class SystemConfigurationViewSet(viewsets.ReadOnlyModelViewSet):
         config = self.get_object()
         serializer = self.get_serializer(config)
         return Response(serializer.data)
+
+
+# ============================================================
+# Parameterization Views (Gestão de Parametrizações)
+# ============================================================
+
+# --- Vehicle Brands ---
+@login_required
+def brand_list(request):
+    brands = VehicleBrand.objects.all().annotate(vehicle_count=Count('vehicles'))
+    context = {'brands': brands, 'segment': 'param_brands'}
+    return render(request, 'vehicle_rental/param/brand_list.html', context)
+
+@login_required
+def brand_create(request):
+    if request.method == 'POST':
+        form = VehicleBrandForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Marca criada com sucesso.')
+            return redirect('vehicle_rental:brand_list')
+    else:
+        form = VehicleBrandForm()
+    return render(request, 'vehicle_rental/param/brand_form.html', {'form': form, 'segment': 'param_brands', 'title': 'Nova Marca'})
+
+@login_required
+def brand_edit(request, pk):
+    brand = get_object_or_404(VehicleBrand, pk=pk)
+    if request.method == 'POST':
+        form = VehicleBrandForm(request.POST, instance=brand)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Marca atualizada com sucesso.')
+            return redirect('vehicle_rental:brand_list')
+    else:
+        form = VehicleBrandForm(instance=brand)
+    return render(request, 'vehicle_rental/param/brand_form.html', {'form': form, 'segment': 'param_brands', 'title': 'Editar Marca'})
+
+@login_required
+def brand_delete(request, pk):
+    brand = get_object_or_404(VehicleBrand, pk=pk)
+    if request.method == 'POST':
+        brand.delete()
+        messages.success(request, 'Marca eliminada com sucesso.')
+    return redirect('vehicle_rental:brand_list')
+
+
+# --- Delivery Locations ---
+@login_required
+def location_list(request):
+    locations = DeliveryLocation.objects.all()
+    context = {'locations': locations, 'segment': 'param_locations'}
+    return render(request, 'vehicle_rental/param/location_list.html', context)
+
+@login_required
+def location_create(request):
+    if request.method == 'POST':
+        form = DeliveryLocationForm(request.POST)
+        if form.is_valid():
+            location = form.save(commit=False)
+            location.created_by = request.user
+            location.save()
+            messages.success(request, 'Local criado com sucesso.')
+            return redirect('vehicle_rental:location_list')
+    else:
+        form = DeliveryLocationForm()
+    return render(request, 'vehicle_rental/param/location_form.html', {'form': form, 'segment': 'param_locations', 'title': 'Novo Local'})
+
+@login_required
+def location_edit(request, pk):
+    location = get_object_or_404(DeliveryLocation, pk=pk)
+    if request.method == 'POST':
+        form = DeliveryLocationForm(request.POST, instance=location)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Local atualizado com sucesso.')
+            return redirect('vehicle_rental:location_list')
+    else:
+        form = DeliveryLocationForm(instance=location)
+    return render(request, 'vehicle_rental/param/location_form.html', {'form': form, 'segment': 'param_locations', 'title': 'Editar Local'})
+
+@login_required
+def location_delete(request, pk):
+    location = get_object_or_404(DeliveryLocation, pk=pk)
+    if request.method == 'POST':
+        location.delete()
+        messages.success(request, 'Local eliminado com sucesso.')
+    return redirect('vehicle_rental:location_list')
+
+
+# --- Expense Categories ---
+@login_required
+def expense_category_list(request):
+    categories = ExpenseCategory.objects.all().annotate(expense_count=Count('expenses'))
+    context = {'categories': categories, 'segment': 'param_expense_categories'}
+    return render(request, 'vehicle_rental/param/expense_category_list.html', context)
+
+@login_required
+def expense_category_create(request):
+    if request.method == 'POST':
+        form = ExpenseCategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Categoria criada com sucesso.')
+            return redirect('vehicle_rental:expense_category_list')
+    else:
+        form = ExpenseCategoryForm()
+    return render(request, 'vehicle_rental/param/expense_category_form.html', {'form': form, 'segment': 'param_expense_categories', 'title': 'Nova Categoria'})
+
+@login_required
+def expense_category_edit(request, pk):
+    category = get_object_or_404(ExpenseCategory, pk=pk)
+    if request.method == 'POST':
+        form = ExpenseCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Categoria atualizada com sucesso.')
+            return redirect('vehicle_rental:expense_category_list')
+    else:
+        form = ExpenseCategoryForm(instance=category)
+    return render(request, 'vehicle_rental/param/expense_category_form.html', {'form': form, 'segment': 'param_expense_categories', 'title': 'Editar Categoria'})
+
+@login_required
+def expense_category_delete(request, pk):
+    category = get_object_or_404(ExpenseCategory, pk=pk)
+    if request.method == 'POST':
+        category.delete()
+        messages.success(request, 'Categoria eliminada com sucesso.')
+    return redirect('vehicle_rental:expense_category_list')
+
+
+# --- System Configuration ---
+@login_required
+def system_config_edit(request):
+    config = SystemConfiguration.objects.first()
+    if not config:
+        config = SystemConfiguration.objects.create()
+    if request.method == 'POST':
+        form = SystemConfigurationForm(request.POST, instance=config)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.updated_by = request.user
+            obj.save()
+            messages.success(request, 'Configurações atualizadas com sucesso.')
+            return redirect('vehicle_rental:system_config')
+    else:
+        form = SystemConfigurationForm(instance=config)
+    return render(request, 'vehicle_rental/param/system_config.html', {'form': form, 'config': config, 'segment': 'param_system_config'})

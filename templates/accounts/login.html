@@ -1,7 +1,7 @@
 {% extends "layouts/base-auth.html" %}
 {% load static %}
 
-{% block title %}Login | DriveOn Car Rental{% endblock title %}
+{% block title %}Login | Universal Rent Car{% endblock title %}
 
 {% block content %}
 
@@ -25,21 +25,17 @@
               <div class="text-center mb-3">
                 <a href="{% url "index" %}" class="text-decoration-none">
                   <div class="logo-container-login d-inline-flex align-items-center justify-content-center mb-2"
-                       style="width: 80px; height: 80px; background: linear-gradient(135deg, #3498db, #2980b9); 
-                              border-radius: 16px; box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+                       style="width: 80px; height: 80px;
+                              border-radius: 16px;
                               transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
                     <img src="{% static 'img/driveon.png' %}" 
-                         alt="DriveOn Car Rental" 
-                         style="max-width: 55px; max-height: 55px; object-fit: contain;
-                                filter: brightness(1.1) contrast(1.1);">
+                         alt="Universal Rent Car" 
+                         style="max-width: 55px; max-height: 55px; object-fit: contain;">
                   </div>
                   <div class="brand-section">
                     <h3 class="fw-bold text-primary mb-1" style="font-family: 'Inter', sans-serif; letter-spacing: -0.5px; font-size: 1.8rem;">
-                      DriveOn
+                      Universal Rent Car
                     </h3>
-                    <p class="text-muted small mb-0" style="font-size: 12px; letter-spacing: 0.5px;">
-                      Car Rental System
-                    </p>
                   </div>
                 </a>
               </div>
@@ -104,7 +100,6 @@
     /* Login page specific styles */
     .logo-container-login:hover {
       transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 12px 35px rgba(52, 152, 219, 0.4) !important;
     }
     
     .btn-primary:hover {
