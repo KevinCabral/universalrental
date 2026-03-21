@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:30px 0;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color:#28a745; padding:30px 40px; text-align:center;">
+                            <h1 style="margin:0; color:#ffffff; font-size:24px;">✓ Devolução Concluída</h1>
+                            <p style="margin:8px 0 0; color:#d4edda; font-size:14px;">Aluguer #{{ rental.id }}</p>
+                        </td>
+                    </tr>
+
+                    <!-- Greeting -->
+                    <tr>
+                        <td style="padding:30px 40px 10px;">
+                            <p style="margin:0; font-size:16px; color:#333;">
+                                Olá <strong>{{ rental.customer.full_name }}</strong>,
+                            </p>
+                            <p style="margin:10px 0 0; font-size:14px; color:#555; line-height:1.6;">
+                                Obrigado por escolher a {{ company_name }}! A devolução do veículo foi registada com sucesso.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Success Alert -->
+                    <tr>
+                        <td style="padding:10px 40px;">
+                            <div style="background-color:#d4edda; border-left:4px solid #28a745; padding:15px; border-radius:4px;">
+                                <p style="margin:0; font-size:14px; color:#155724;">
+                                    <strong>✓ Devolução Registada</strong><br>
+                                    O veículo foi devolvido em {{ rental.actual_return_date|date:"d/m/Y às H:i" }}.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Return Details -->
+                    <tr>
+                        <td style="padding:20px 40px;">
+                            <h2 style="margin:0 0 15px; font-size:16px; color:#28a745; border-bottom:2px solid #28a745; padding-bottom:8px;">
+                                Detalhes da Devolução
+                            </h2>
+                            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="font-size:14px; color:#333;">
+                                <tr>
+                                    <td style="padding:6px 0; color:#777; width:40%;">Veículo:</td>
+                                    <td style="padding:6px 0; font-weight:bold;">{{ rental.vehicle.brand.name }} {{ rental.vehicle.model }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#777;">Período de Aluguer:</td>
+                                    <td style="padding:6px 0;">{{ rental.start_date|date:"d/m/Y" }} - {{ rental.end_date|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#777;">Data de Devolução:</td>
+                                    <td style="padding:6px 0; font-weight:bold;">{{ rental.actual_return_date|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% if rental.mileage_end %}
+                                <tr>
+                                    <td style="padding:6px 0; color:#777;">Quilometragem Final:</td>
+                                    <td style="padding:6px 0;">{{ rental.mileage_end|floatformat:0 }} km</td>
+                                </tr>
+                                {% endif %}
+                                {% if rental.late_return_fee and rental.late_return_fee > 0 %}
+                                <tr>
+                                    <td style="padding:6px 0; color:#ff6b6b; font-weight:bold;">Taxa de Atraso:</td>
+                                    <td style="padding:6px 0; color:#ff6b6b; font-weight:bold;">{{ rental.late_return_fee|floatformat:2 }} {{ rental.currency }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if rental.damage_fee and rental.damage_fee > 0 %}
+                                <tr>
+                                    <td style="padding:6px 0; color:#ff6b6b; font-weight:bold;">Taxa de Danos:</td>
+                                    <td style="padding:6px 0; color:#ff6b6b; font-weight:bold;">{{ rental.damage_fee|floatformat:2 }} {{ rental.currency }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td style="padding:12px 0; font-size:16px; font-weight:bold; color:#28a745; border-top:2px solid #eee;">TOTAL FINAL:</td>
+                                    <td style="padding:12px 0; text-align:right; font-size:16px; font-weight:bold; color:#28a745; border-top:2px solid #eee;">
+                                        {{ rental.total_amount|floatformat:2 }} {{ rental.currency }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Evaluation Request -->
+                    <tr>
+                        <td style="padding:20px 40px;">
+                            <div style="background-color:#fff3cd; padding:25px; border-radius:8px; text-align:center; border:2px solid #ffc107;">
+                                <h3 style="margin:0 0 10px; font-size:18px; color:#856404;">
+                                    ⭐ A sua opinião é importante!
+                                </h3>
+                                <p style="margin:0 0 20px; font-size:14px; color:#856404; line-height:1.6;">
+                                    Ajude-nos a melhorar! Avalie a sua experiência de aluguer connosco.
+                                </p>
+                                <a href="{{ evaluation_url }}" 
+                                   style="display:inline-block; background-color:#ffc107; color:#000; padding:14px 35px; text-decoration:none; border-radius:6px; font-weight:bold; font-size:15px;">
+                                    ⭐ Avaliar Aluguer
+                                </a>
+                                <p style="margin:20px 0 0; font-size:12px; color:#856404;">
+                                    Ou copie este link: <br>
+                                    <span style="word-break:break-all; color:#856404;">{{ evaluation_url }}</span>
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Thank You Message -->
+                    <tr>
+                        <td style="padding:20px 40px;">
+                            <div style="text-align:center; padding:20px; background-color:#f8f9fa; border-radius:8px;">
+                                <p style="margin:0; font-size:16px; color:#333; font-weight:bold;">
+                                    Obrigado por nos escolher!
+                                </p>
+                                <p style="margin:10px 0 0; font-size:14px; color:#666;">
+                                    Esperamos vê-lo novamente em breve.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#f8f9fa; padding:20px 40px; text-align:center; border-top:1px solid #eee;">
+                            <p style="margin:0; font-size:13px; color:#999;">
+                                <strong>{{ company_name }}</strong><br>
+                                Email: {{ company_email }} | Tel: {{ company_phone1 }} / {{ company_phone2 }}<br>
+                                Este email foi gerado automaticamente. Para qualquer questão, entre em contacto connosco.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
