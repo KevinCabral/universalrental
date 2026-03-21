@@ -78,6 +78,11 @@ urlpatterns = [
     # Parameterization – System Configuration
     path('system-config/', views.system_config_edit, name='system_config'),
 
+    # Customer Notifications
+    path('notifications/', views.notification_list, name='notification_list'),
+    path('notifications/<int:pk>/', views.notification_detail, name='notification_detail'),
+    path('notifications/<int:pk>/resend/', views.notification_resend, name='notification_resend'),
+
     # Reports
     path('reports/', views.reports_dashboard, name='reports_dashboard'),
     path('reports/revenue/', views.revenue_report, name='revenue_report'),

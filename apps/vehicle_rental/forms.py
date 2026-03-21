@@ -315,6 +315,14 @@ class RentalForm(forms.ModelForm):
             # Make timezone-aware if it's not
             if start_date.tzinfo is None:
                 start_date = timezone.make_aware(start_date)
+
+            # Start date cannot be before today (only for new rentals)
+            if not self.instance.pk:
+                today_start = timezone.make_aware(
+                    __import__('datetime').datetime.combine(timezone.now().date(), __import__('datetime').time.min)
+                )
+                if start_date < today_start:
+                    raise ValidationError('A data de início não pode ser inferior à data de hoje.')
         return start_date
     
     def clean_end_date(self):
@@ -328,6 +336,14 @@ class RentalForm(forms.ModelForm):
             # Make timezone-aware if it's not
             if end_date.tzinfo is None:
                 end_date = timezone.make_aware(end_date)
+
+            # End date must be after today (only for new rentals)
+            if not self.instance.pk:
+                today_start = timezone.make_aware(
+                    __import__('datetime').datetime.combine(timezone.now().date(), __import__('datetime').time.min)
+                )
+                if end_date < today_start:
+                    raise ValidationError('A data de fim deve ser superior à data de hoje.')
         return end_date
     
     def clean(self):

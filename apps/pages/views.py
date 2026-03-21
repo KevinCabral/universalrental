@@ -42,14 +42,14 @@ def index(request):
 
   # Monthly revenue
   monthly_revenue = Rental.objects.filter(
-      status__in=['active', 'completed'],
-      created_at__gte=current_month_start,
-      created_at__lt=next_month_start,
+      status__in=['confirmed', 'active', 'completed'],
+      start_date__gte=current_month_start,
+      start_date__lt=next_month_start,
   ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
 
   # Total revenue (all time)
   total_revenue = Rental.objects.filter(
-      status__in=['active', 'completed'],
+      status__in=['confirmed', 'active', 'completed'],
   ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
 
   # Monthly expenses
@@ -63,29 +63,46 @@ def index(request):
 
   # Rentals this month
   rentals_this_month = Rental.objects.filter(
-      created_at__gte=current_month_start,
-      created_at__lt=next_month_start,
+      start_date__gte=current_month_start,
+      start_date__lt=next_month_start,
+      status__in=['confirmed', 'active', 'completed']
   ).count()
+
+  # Driver requests stats (all time)
+  driver_requests = Rental.objects.filter(
+      driver=True,
+      status__in=['confirmed', 'active', 'completed']
+  )
+  driver_requests_count = driver_requests.count()
+  driver_requests_revenue = driver_requests.aggregate(total=Sum('driver_fee'))['total'] or Decimal('0')
+
+  # Car seat requests stats (all time)
+  car_seat_requests = Rental.objects.filter(
+      car_seat=True,
+      status__in=['confirmed', 'active', 'completed']
+  )
+  car_seat_requests_count = car_seat_requests.count()
+  car_seat_requests_revenue = car_seat_requests.aggregate(total=Sum('car_seat_fee'))['total'] or Decimal('0')
 
   # Best customer (most rentals)
   best_customer = Customer.objects.annotate(
-      rental_count=Count('rentals', filter=Q(rentals__status__in=['active', 'completed'])),
-      total_spent=Sum('rentals__total_amount', filter=Q(rentals__status__in=['active', 'completed']))
+      rental_count=Count('rentals', filter=Q(rentals__status__in=['confirmed', 'active', 'completed'])),
+      total_spent=Sum('rentals__total_amount', filter=Q(rentals__status__in=['confirmed', 'active', 'completed']))
   ).order_by('-rental_count').first()
 
   # Most rented vehicle
   most_rented_vehicle = Vehicle.objects.annotate(
-      rental_count=Count('rentals', filter=Q(rentals__status__in=['active', 'completed']))
+      rental_count=Count('rentals', filter=Q(rentals__status__in=['confirmed', 'active', 'completed']))
   ).order_by('-rental_count').first()
 
   # Average rental duration
   avg_duration = Rental.objects.filter(
-      status__in=['active', 'completed']
+      status__in=['confirmed', 'active', 'completed']
   ).aggregate(avg=Avg('number_of_days'))['avg'] or 0
 
   # Average daily rate
   avg_daily_rate = Rental.objects.filter(
-      status__in=['active', 'completed']
+      status__in=['confirmed', 'active', 'completed']
   ).aggregate(avg=Avg('daily_rate'))['avg'] or Decimal('0')
 
   # Recent rentals (last 10)
@@ -119,9 +136,9 @@ def index(request):
           month_end = now.replace(year=year, month=month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
       
       rev = Rental.objects.filter(
-          status__in=['active', 'completed'],
-          created_at__gte=month_start,
-          created_at__lt=month_end,
+          status__in=['confirmed', 'active', 'completed'],
+          start_date__gte=month_start,
+          start_date__lt=month_end,
       ).aggregate(total=Sum('total_amount'))['total'] or 0
       monthly_chart_data.append(float(rev))
       month_names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -141,6 +158,15 @@ def index(request):
     'completed_rentals': completed_rentals,
     'overdue_rentals': overdue_rentals,
     'monthly_revenue': monthly_revenue,
+    'total_revenue': total_revenue,
+    'monthly_expenses': monthly_expenses,
+    'monthly_profit': monthly_profit,
+    'rentals_this_month': rentals_this_month,
+    'driver_requests_count': driver_requests_count,
+    'driver_requests_revenue': driver_requests_revenue,
+    'car_seat_requests_count': car_seat_requests_count,
+    'car_seat_requests_revenue': car_seat_requests_revenue,
+    'best_customer': best_customer,
     'total_revenue': total_revenue,
     'monthly_expenses': monthly_expenses,
     'monthly_profit': monthly_profit,

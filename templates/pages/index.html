@@ -188,6 +188,49 @@
           </div>
         </div>
 
+        <!-- KPI Cards Row 3 - Additional Services -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="avtar avtar-s bg-light-info rounded-circle">
+                    <i class="ti ti-steering-wheel f-24"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <p class="text-muted mb-1 small">Solicitações Motorista</p>
+                  <h4 class="mb-0">{{ driver_requests_count }}</h4>
+                </div>
+              </div>
+              <div class="mt-3">
+                <span class="badge bg-light-info">{{ driver_requests_revenue|floatformat:0 }} ECV total</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="avtar avtar-s bg-light-warning rounded-circle">
+                    <i class="ti ti-baby-carriage f-24"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <p class="text-muted mb-1 small">Solicitações Car Seat</p>
+                  <h4 class="mb-0">{{ car_seat_requests_count }}</h4>
+                </div>
+              </div>
+              <div class="mt-3">
+                <span class="badge bg-light-warning">{{ car_seat_requests_revenue|floatformat:0 }} ECV total</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Revenue Chart -->
         <div class="col-xl-8 col-md-12">
           <div class="card">
