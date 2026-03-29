@@ -778,7 +778,7 @@ def _send_rental_booking_email(rental, request):
         'company_email': 'universal.r.car@gmail.com',
         'company_phone1': '(+238) 978 13 04',
         'company_phone2': '(+238) 347 6581',
-    }
+    } 
 
     html_body = render_to_string('vehicle_rental/email/rental_booking.html', context)
     # Plain-text fallback
