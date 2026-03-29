@@ -36,14 +36,14 @@
                   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
                   box-shadow: 0 1px 4px rgba(0,0,0,0.3); border-radius: 1px;"></div>
     </div>
-    <div class="navbar-content" style="padding: 0 15px; margin-top: 20px; display: flex; flex-direction: column; overflow-y: auto; height: calc(100vh - 160px);">
+    <div class="navbar-content" style="padding: 0 15px; margin-top: 20px;">
 
       <ul class="pc-navbar">
       {% if request.user.is_authenticated %}
       {% if request.user.is_superuser %}  
 
       <!-- Visual Section Divider for Admin -->
-      <!--li class="pc-item" style="margin-bottom: 15px;">
+      <li class="pc-item" style="margin-bottom: 15px;">
         <div style="display: flex; align-items: center; margin: 10px 0;">
           <div style="flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);"></div>
           <span style="color: rgba(255,255,255,0.6); font-size: 10px; font-weight: 600; 
@@ -52,14 +52,14 @@
         </div>
       </li>
       
-      <li-- class="pc-item">
+      <li class="pc-item">
         <a href="{% url "admin:index" %}" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
           <span class="pc-micon">
             <i data-feather="settings" style="color: rgba(255,255,255,0.8);"></i>
           </span>
           <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Interface Superusuário</span>
         </a>
-      </li-->
+      </li>
       
       <!-- superuser guard -->  
       {% endif %}
@@ -128,49 +128,6 @@
                 <span class="pc-mtext">Manutenção</span>
               </a>
             </li>
-            <li class="pc-item">
-              <a class="pc-link" href="{% url 'vehicle_rental:notification_list' %}">
-                <span class="pc-micon"><i data-feather="bell"></i></span>
-                <span class="pc-mtext">Notificações</span>
-              </a>
-            </li>
-          </ul>
-        </li>
-        
-        <!-- Gestão de Parametrizações -->
-        <li class="pc-item pc-hasmenu">
-          <a href="#!" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
-            <span class="pc-micon">
-              <i data-feather="sliders" style="color: rgba(255,255,255,0.8);"></i>
-            </span>
-            <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Parametrizações</span>
-            <span class="pc-arrow"><i class="ti ti-chevron-right" style="color: rgba(255,255,255,0.6);"></i></span>
-          </a>
-          <ul class="pc-submenu">
-            <li class="pc-item">
-              <a class="pc-link" href="{% url 'vehicle_rental:brand_list' %}">
-                <span class="pc-micon"><i data-feather="tag"></i></span>
-                <span class="pc-mtext">Marcas de Veículos</span>
-              </a>
-            </li>
-            <li class="pc-item">
-              <a class="pc-link" href="{% url 'vehicle_rental:location_list' %}">
-                <span class="pc-micon"><i data-feather="map-pin"></i></span>
-                <span class="pc-mtext">Locais de Entrega/Devolução</span>
-              </a>
-            </li>
-            <li class="pc-item">
-              <a class="pc-link" href="{% url 'vehicle_rental:expense_category_list' %}">
-                <span class="pc-micon"><i data-feather="folder"></i></span>
-                <span class="pc-mtext">Categorias de Despesas</span>
-              </a>
-            </li>
-            <li class="pc-item">
-              <a class="pc-link" href="{% url 'vehicle_rental:system_config' %}">
-                <span class="pc-micon"><i data-feather="settings"></i></span>
-                <span class="pc-mtext">Configurações do Sistema</span>
-              </a>
-            </li>
           </ul>
         </li>
         
@@ -210,15 +167,14 @@
 
       </ul>
       
-      <div class="card pc-user-card" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; margin: 15px 0; flex-shrink: 0;">
-        <div class="card-body text-center" style="padding: 10px;">
-          <a href="http://universalrental.cv/" class="btn" target="_blank"
+      <div class="card pc-user-card my-3" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;">
+        <div class="card-body text-center">
+          <a href="https://driveon-car-rental.com" class="btn" 
              style="background: linear-gradient(45deg, #3498db, #2980b9); color: white; border: none; 
                     border-radius: 8px; padding: 8px 16px; font-weight: 600; text-decoration: none;
-                    transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
-                    font-size: 13px; white-space: nowrap;">
+                    transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);">
             <span class="pc-micon"><i data-feather="external-link"></i></span>
-            Visitar Website
+            Visit Website
           </a>
         </div>
       </div>
@@ -422,15 +378,6 @@
   border-bottom: 1px solid rgba(255,255,255,0.1) !important;
 }
 
-/* Navbar content flex layout */
-.navbar-content .pc-navbar {
-  flex: 1 1 auto;
-}
-
-.navbar-content .pc-user-card {
-  flex-shrink: 0;
-}
-
 /* Scroll behavior */
 .navbar-content {
   scrollbar-width: thin;
@@ -452,35 +399,6 @@
 
 .navbar-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.5);
-}
-
-/* Ensure user card is visible on small screens */
-@media (max-width: 768px) {
-  .navbar-content {
-    height: calc(100vh - 140px) !important;
-  }
-  .pc-user-card .card-body {
-    padding: 8px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar-content {
-    height: calc(100vh - 125px) !important;
-  }
-  .pc-user-card .card-body {
-    padding: 6px !important;
-  }
-  .pc-user-card .btn {
-    font-size: 12px !important;
-    padding: 6px 12px !important;
-  }
-}
-
-@media (max-width: 320px) {
-  .navbar-content {
-    height: calc(100vh - 115px) !important;
-  }
 }
 </style>
 
