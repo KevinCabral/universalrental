@@ -46,8 +46,10 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:4200',   # Angular
     'http://localhost:5173',    # Vite
     'http://127.0.0.1:5173',   # Vite
-    'http://84.247.171.243:9494',  # Your production server
-    'https://84.247.171.243:9494', # HTTPS version
+    'http://212.47.74.168:5085',  # Your production server
+    'https://212.47.74.168:5085', # HTTPS version
+    'https://admin.universalrental.cv',
+    'https://universalrental.cv',
 ]
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
@@ -55,6 +57,28 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:    
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# Jazzmin Admin Settings
+JAZZMIN_SETTINGS = {
+    "site_title": "Universal Rental",
+    "site_header": "Universal Rental",
+    "site_brand": "Universal Rental",
+    "welcome_sign": "Bem-vindo à Administração",
+    "site_logo": "img/driveon.png",
+    "site_icon": "img/driveon.png",
+    "custom_links": {
+        "app": [{
+            "name": "Voltar ao Painel",
+            "url": "/",
+            "icon": "fas fa-arrow-left",
+        }],
+    },
+    "topmenu_links": [
+        {"name": "Voltar ao Painel", "url": "/", "icon": "fas fa-arrow-left"},
+        {"app": "auth"},
+    ],
+    "show_ui_builder": False,
+}
 
 # Application definition
 
@@ -128,17 +152,21 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-DB_ENGINE   = os.getenv('DB_ENGINE'   , None)
+DB_ENGINE   = os.getenv('DB_ENGINE'   , 'postgresql')
 DB_USERNAME = os.getenv('DB_USERNAME' , None)
 DB_PASS     = os.getenv('DB_PASS'     , None)
-DB_HOST     = os.getenv('DB_HOST'     , None)
-DB_PORT     = os.getenv('DB_PORT'     , None)
+DB_HOST     = os.getenv('DB_HOST'     , 'localhost')
+DB_PORT     = os.getenv('DB_PORT'     , '5432')
 DB_NAME     = os.getenv('DB_NAME'     , None)
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': DB_NAME,
+        'USER': DB_USERNAME,
+        'PASSWORD': DB_PASS,
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
     }
 }
 
@@ -204,12 +232,12 @@ LOGIN_URL = '/accounts/login/'  # Redirect to login page when login required
 
 # Para enviar emails reais (Gmail - substitua com suas credenciais):
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'adylsonrtb08@gmail.com'  # Substitua pelo seu email
-EMAIL_HOST_PASSWORD = 'quik juts iqfx inxk'  # Substitua pela senha de app do Gmail
-DEFAULT_FROM_EMAIL = 'adylsonrtb08@gmail.com'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = str2bool(os.getenv('EMAIL_USE_TLS', 'True'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
 EMAIL_TIMEOUT = 10
 
 # ### DYNAMIC_DATATB Settings ###

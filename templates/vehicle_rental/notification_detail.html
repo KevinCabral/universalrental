@@ -1,0 +1,284 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Detalhes da Notificação #{{ notification.id }} | Universal Rent a Car{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Detalhes da Notificação #{{ notification.id }}</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:notification_list' %}">Notificações</a></li>
+          <li class="breadcrumb-item active">Notificação #{{ notification.id }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Notification Info -->
+      <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-envelope me-2"></i>
+              Informações da Notificação
+            </h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-borderless">
+              <tr>
+                <th style="width: 200px;">ID:</th>
+                <td>{{ notification.id }}</td>
+              </tr>
+              <tr>
+                <th>Tipo:</th>
+                <td><span class="badge bg-info">{{ notification.get_notification_type_display }}</span></td>
+              </tr>
+              <tr>
+                <th>Cliente:</th>
+                <td>
+                  <a href="{% url 'vehicle_rental:customer_detail' notification.customer.pk %}">
+                    {{ notification.customer.full_name }}
+                  </a>
+                </td>
+              </tr>
+              {% if notification.rental %}
+              <tr>
+                <th>Aluguer:</th>
+                <td>
+                  <a href="{% url 'vehicle_rental:rental_detail' notification.rental.pk %}">
+                    Aluguer #{{ notification.rental.id }} - {{ notification.rental.vehicle }}
+                  </a>
+                </td>
+              </tr>
+              {% endif %}
+              <tr>
+                <th>Email Destinatário:</th>
+                <td>{{ notification.recipient_email }}</td>
+              </tr>
+              <tr>
+                <th>Assunto:</th>
+                <td><strong>{{ notification.subject }}</strong></td>
+              </tr>
+              <tr>
+                <th>Estado:</th>
+                <td>
+                  {% if notification.status == 'sent' %}
+                    <span class="badge bg-success">
+                      <i class="fas fa-check-circle me-1"></i>
+                      {{ notification.get_status_display }}
+                    </span>
+                  {% elif notification.status == 'failed' %}
+                    <span class="badge bg-danger">
+                      <i class="fas fa-times-circle me-1"></i>
+                      {{ notification.get_status_display }}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning">
+                      <i class="fas fa-clock me-1"></i>
+                      {{ notification.get_status_display }}
+                    </span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Tentativas:</th>
+                <td>{{ notification.attempt_count }}</td>
+              </tr>
+              <tr>
+                <th>Data de Criação:</th>
+                <td>{{ notification.created_at|date:"d/m/Y H:i:s" }}</td>
+              </tr>
+              {% if notification.sent_at %}
+              <tr>
+                <th>Data de Envio:</th>
+                <td>{{ notification.sent_at|date:"d/m/Y H:i:s" }}</td>
+              </tr>
+              {% endif %}
+              {% if notification.created_by %}
+              <tr>
+                <th>Criado/Reenviado Por:</th>
+                <td>{{ notification.created_by.username }}</td>
+              </tr>
+              {% endif %}
+            </table>
+
+            {% if notification.error_message %}
+            <div class="alert alert-danger mt-3">
+              <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Mensagem de Erro</h6>
+              <p class="mb-0">{{ notification.error_message }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Email Content -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-file-alt me-2"></i>
+              Conteúdo do Email (Texto)
+            </h5>
+          </div>
+          <div class="card-body">
+            <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{{ notification.content }}</pre>
+          </div>
+        </div>
+
+        {% if notification.html_content %}
+        <div class="card shadow-sm mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-code me-2"></i>
+              Conteúdo HTML
+              <button class="btn btn-sm btn-outline-secondary float-end" type="button" data-bs-toggle="collapse" data-bs-target="#htmlPreview">
+                <i class="fas fa-eye me-1"></i> Pré-visualizar
+              </button>
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="collapse" id="htmlPreview">
+              <div class="border rounded p-3 mb-3" style="max-height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                {{ notification.html_content|safe }}
+              </div>
+            </div>
+            <pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;"><code>{{ notification.html_content }}</code></pre>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Actions Sidebar -->
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-cog me-2"></i>
+              Ações
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if notification.status == 'failed' %}
+              <a href="{% url 'vehicle_rental:notification_resend' notification.pk %}" 
+                 class="btn btn-success w-100 mb-3">
+                <i class="fas fa-redo me-2"></i> Reenviar Notificação
+              </a>
+            {% endif %}
+
+            <a href="{% url 'vehicle_rental:notification_list' %}" 
+               class="btn btn-outline-secondary w-100 mb-3">
+              <i class="fas fa-arrow-left me-2"></i> Voltar à Lista
+            </a>
+
+            {% if notification.customer %}
+              <a href="{% url 'vehicle_rental:customer_detail' notification.customer.pk %}" 
+                 class="btn btn-outline-primary w-100 mb-3">
+                <i class="fas fa-user me-2"></i> Ver Cliente
+              </a>
+            {% endif %}
+
+            {% if notification.rental %}
+              <a href="{% url 'vehicle_rental:rental_detail' notification.rental.pk %}" 
+                 class="btn btn-outline-info w-100">
+                <i class="fas fa-car me-2"></i> Ver Aluguer
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Status Timeline -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-history me-2"></i>
+              Histórico
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-badge bg-primary">
+                  <i class="fas fa-plus"></i>
+                </div>
+                <div class="timeline-content">
+                  <small class="text-muted">{{ notification.created_at|date:"d/m/Y H:i" }}</small>
+                  <p class="mb-0">Notificação criada</p>
+                </div>
+              </div>
+
+              {% if notification.sent_at %}
+              <div class="timeline-item">
+                <div class="timeline-badge bg-success">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div class="timeline-content">
+                  <small class="text-muted">{{ notification.sent_at|date:"d/m/Y H:i" }}</small>
+                  <p class="mb-0">Email enviado com sucesso</p>
+                </div>
+              </div>
+              {% elif notification.status == 'failed' %}
+              <div class="timeline-item">
+                <div class="timeline-badge bg-danger">
+                  <i class="fas fa-times"></i>
+                </div>
+                <div class="timeline-content">
+                  <small class="text-muted">{{ notification.created_at|date:"d/m/Y H:i" }}</small>
+                  <p class="mb-0">Falha no envio ({{ notification.attempt_count }} tentativas)</p>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.timeline {
+  position: relative;
+  padding-left: 30px;
+}
+.timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+.timeline-item:not(:last-child):before {
+  content: '';
+  position: absolute;
+  left: -19px;
+  top: 30px;
+  height: calc(100% - 10px);
+  width: 2px;
+  background: #ddd;
+}
+.timeline-badge {
+  position: absolute;
+  left: -30px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+}
+.timeline-content {
+  padding-left: 10px;
+}
+</style>
+
+{% endblock content %}

@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import (
     Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory, 
-    MaintenanceRecord, RentalPhoto, DeliveryLocation
+    MaintenanceRecord, RentalPhoto, DeliveryLocation, SystemConfiguration
 )
 
 
@@ -315,6 +315,14 @@ class RentalForm(forms.ModelForm):
             # Make timezone-aware if it's not
             if start_date.tzinfo is None:
                 start_date = timezone.make_aware(start_date)
+
+            # Start date cannot be before today (only for new rentals)
+            if not self.instance.pk:
+                today_start = timezone.make_aware(
+                    __import__('datetime').datetime.combine(timezone.now().date(), __import__('datetime').time.min)
+                )
+                if start_date < today_start:
+                    raise ValidationError('A data de início não pode ser inferior à data de hoje.')
         return start_date
     
     def clean_end_date(self):
@@ -328,6 +336,14 @@ class RentalForm(forms.ModelForm):
             # Make timezone-aware if it's not
             if end_date.tzinfo is None:
                 end_date = timezone.make_aware(end_date)
+
+            # End date must be after today (only for new rentals)
+            if not self.instance.pk:
+                today_start = timezone.make_aware(
+                    __import__('datetime').datetime.combine(timezone.now().date(), __import__('datetime').time.min)
+                )
+                if end_date < today_start:
+                    raise ValidationError('A data de fim deve ser superior à data de hoje.')
         return end_date
     
     def clean(self):
@@ -684,3 +700,83 @@ RentalReturnPhotosFormSet = forms.inlineformset_factory(
     extra=6,  # Number of extra forms
     max_num=10  # Maximum number of photos
 )
+
+
+class VehicleBrandForm(forms.ModelForm):
+    class Meta:
+        model = VehicleBrand
+        fields = ['name', 'country_of_origin']
+        labels = {
+            'name': 'Nome da Marca',
+            'country_of_origin': 'País de Origem',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Toyota, BMW...'}),
+            'country_of_origin': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Japão, Alemanha...'}),
+        }
+
+
+class DeliveryLocationForm(forms.ModelForm):
+    class Meta:
+        model = DeliveryLocation
+        fields = ['name', 'address', 'location_type', 'description', 'is_active', 'default_pickup', 'default_return']
+        labels = {
+            'name': 'Nome do Local',
+            'address': 'Endereço',
+            'location_type': 'Tipo de Local',
+            'description': 'Descrição',
+            'is_active': 'Ativo',
+            'default_pickup': 'Local Padrão de Entrega',
+            'default_return': 'Local Padrão de Devolução',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'location_type': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'default_pickup': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'default_return': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class ExpenseCategoryForm(forms.ModelForm):
+    class Meta:
+        model = ExpenseCategory
+        fields = ['name', 'description', 'is_active']
+        labels = {
+            'name': 'Nome da Categoria',
+            'description': 'Descrição',
+            'is_active': 'Ativa',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class SystemConfigurationForm(forms.ModelForm):
+    class Meta:
+        model = SystemConfiguration
+        fields = [
+            'service_fee_percentage', 'service_fee_amount',
+            'driver_daily_rate', 'car_seat_daily_rate',
+            'euro_exchange_rate', 'usd_exchange_rate',
+        ]
+        labels = {
+            'service_fee_percentage': 'Taxa de Serviço (%)',
+            'service_fee_amount': 'Taxa de Serviço (Valor Fixo)',
+            'driver_daily_rate': 'Tarifa Diária Motorista (CVE)',
+            'car_seat_daily_rate': 'Tarifa Diária Assento Criança (CVE)',
+            'euro_exchange_rate': 'Taxa de Câmbio EUR/CVE',
+            'usd_exchange_rate': 'Taxa de Câmbio USD/CVE',
+        }
+        widgets = {
+            'service_fee_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'service_fee_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'driver_daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'car_seat_daily_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'euro_exchange_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'usd_exchange_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+        }

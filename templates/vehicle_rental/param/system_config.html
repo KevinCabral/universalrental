@@ -1,0 +1,128 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Configurações do Sistema | Universal Rental{% endblock %}
+
+{% block content %}
+<div class="pc-container">
+  <div class="pc-content">
+
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Configurações do Sistema</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item">Parametrizações</li>
+          <li class="breadcrumb-item active">Configurações do Sistema</li>
+        </ul>
+      </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-cogs text-primary me-2"></i>
+              Configurações do Sistema
+            </h5>
+          </div>
+          <div class="card-body">
+            <form method="post" novalidate>
+              {% csrf_token %}
+
+              <h6 class="text-muted mb-3 mt-2"><i class="fas fa-percentage me-1"></i> Taxas de Serviço</h6>
+              <div class="row">
+                {% for field in form %}
+                  {% if field.name == 'service_fee_percentage' or field.name == 'service_fee_amount' %}
+                  <div class="col-md-6 mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text text-muted small">{{ field.help_text }}</div>{% endif %}
+                    {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <hr>
+              <h6 class="text-muted mb-3"><i class="fas fa-coins me-1"></i> Tarifas Diárias</h6>
+              <div class="row">
+                {% for field in form %}
+                  {% if field.name == 'driver_daily_rate' or field.name == 'car_seat_daily_rate' %}
+                  <div class="col-md-6 mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text text-muted small">{{ field.help_text }}</div>{% endif %}
+                    {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <hr>
+              <h6 class="text-muted mb-3"><i class="fas fa-exchange-alt me-1"></i> Taxas de Câmbio</h6>
+              <div class="row">
+                {% for field in form %}
+                  {% if field.name == 'euro_exchange_rate' or field.name == 'usd_exchange_rate' %}
+                  <div class="col-md-6 mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text text-muted small">{{ field.help_text }}</div>{% endif %}
+                    {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'index' %}" class="btn btn-secondary">
+                  <i class="fas fa-arrow-left me-1"></i> Voltar ao Painel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save me-1"></i> Guardar Configurações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm border-info">
+          <div class="card-header bg-info text-white">
+            <h6 class="card-title mb-0"><i class="fas fa-info-circle me-1"></i> Informação</h6>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-2">
+              <strong>Última atualização:</strong><br>
+              {% if config.updated_at %}
+                {{ config.updated_at|date:"d/m/Y H:i" }}
+                {% if config.updated_by %} por {{ config.updated_by.get_full_name|default:config.updated_by.username }}{% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </p>
+            <hr>
+            <p class="small text-muted mb-0">
+              Estas configurações afetam os cálculos de preços e taxas em todo o sistema.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

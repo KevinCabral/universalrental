@@ -1,10 +1,11 @@
+import os
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
-from django.db.models import Q, Sum, Count, Avg
+from django.db.models import Q, Sum, Count, Avg, F
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string
@@ -16,9 +17,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
 from .models import (
-    Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand, 
+    Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand,
     ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto, DeliveryLocation,
-    SystemConfiguration
+    SystemConfiguration, CustomerNotification
 )
 from .forms import VehicleForm, CustomerForm, RentalForm
 from .serializers import (
@@ -27,10 +28,14 @@ from .serializers import (
     VehicleBrandSerializer, ChangePasswordSerializer, DeliveryLocationSerializer, SystemConfigurationSerializer
 )
 from .forms import VehicleForm, CustomerForm, RentalForm, ExpenseForm, MaintenanceRecordForm, RentalStartPhotosFormSet, RentalReturnPhotosFormSet
+from .forms import VehicleBrandForm, DeliveryLocationForm, ExpenseCategoryForm, SystemConfigurationForm
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 import json
 import calendar
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Dashboard and Main Views
@@ -56,9 +61,11 @@ def dashboard(request):
     
     # Revenue this month
     current_month = timezone.now().replace(day=1)
+    next_month = (current_month.replace(day=28) + timedelta(days=4)).replace(day=1)
     monthly_revenue = Rental.objects.filter(
-        created_at__gte=current_month,
-        status__in=['completed', 'active']
+        start_date__gte=current_month,
+        start_date__lt=next_month,
+        status__in=['confirmed', 'active', 'completed']
     ).aggregate(total=Sum('total_amount'))['total'] or 0
     
     context = {
@@ -464,7 +471,7 @@ def customer_detail(request, pk):
     
     # Statistics
     total_rentals = rentals.count()
-    total_spent = rentals.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_spent = rentals.filter(status__in=['confirmed', 'active', 'completed']).aggregate(total=Sum('total_amount'))['total'] or 0
     current_rentals = rentals.filter(status='active')
     
     # Add date variables for license expiry checks
@@ -492,6 +499,14 @@ def customer_create(request):
         form = CustomerForm(request.POST)
         if form.is_valid():
             customer = form.save()
+
+            # Send welcome email
+            try:
+                _send_welcome_email(customer, request)
+            except Exception as e:
+                logger.error(f'Failed to send welcome email for customer #{customer.id}: {str(e)}')
+                # Don't prevent customer creation if email fails
+            
             messages.success(request, f'Customer "{customer.full_name}" has been created successfully!')
             return redirect('vehicle_rental:customer_detail', pk=customer.pk)
     else:
@@ -499,8 +514,8 @@ def customer_create(request):
     
     context = {
         'form': form,
-        'title': 'Add New Customer',
-        'submit_text': 'Create Customer'
+        'title': 'Registar Novo Cliente',
+        'submit_text': 'Registar'
     }
     
     return render(request, 'vehicle_rental/customer_form.html', context)
@@ -670,12 +685,27 @@ def rental_create(request):
     if customer_id:
         initial_data['customer'] = customer_id
     
+    # Pre-populate commission from SystemConfiguration
+    sys_config = SystemConfiguration.get_instance()
+    if 'commission_percent' not in initial_data and 'commission_amount' not in initial_data:
+        if sys_config.service_fee_percentage is not None:
+            initial_data['commission_percent'] = sys_config.service_fee_percentage
+        elif sys_config.service_fee_amount is not None:
+            initial_data['commission_amount'] = sys_config.service_fee_amount
+    
     if request.method == 'POST':
         form = RentalForm(request.POST, initial=initial_data)
         if form.is_valid():
             rental = form.save(commit=False)
             rental.created_by = request.user
             rental.save()
+            
+            # Send booking notification email
+            try:
+                _send_rental_booking_email(rental, request)
+            except Exception as e:
+                logger.error(f'Failed to send booking email for rental #{rental.id}: {str(e)}')
+                # Don't prevent rental creation if email fails
             
             # Vehicle status will be updated automatically by signals
             
@@ -694,6 +724,7 @@ def rental_create(request):
         'form': form,
         'available_vehicles': Vehicle.objects.filter(is_active=True),
         'customers': Customer.objects.filter(is_blacklisted=False),
+        'sys_config': sys_config,
     }
     
     return render(request, 'vehicle_rental/rental_create.html', context)
@@ -721,9 +752,222 @@ def rental_edit(request, pk):
         'rental': rental,
         'available_vehicles': Vehicle.objects.filter(is_active=True),
         'customers': Customer.objects.filter(is_blacklisted=False),
+        'sys_config': SystemConfiguration.get_instance(),
     }
     
     return render(request, 'vehicle_rental/rental_create.html', context)
+
+
+def _send_rental_booking_email(rental, request):
+    """Send booking email with tracking link to customer after rental creation."""
+    customer = rental.customer
+    if not customer.email:
+        logger.warning('Rental #%s: customer has no email, skipping booking notification.', rental.id)
+        return
+
+    subject = f'Nova Reserva #{rental.id} - {rental.vehicle.brand.name} {rental.vehicle.model}'
+
+    # Generate tracking URL for customer to check booking status
+    booking_status_url = os.environ.get('BOOKING_STATUS_URL', 'http://localhost:8080/universal-rent-a-car/booking-status')
+    tracking_url = f"{booking_status_url}?rental_id={rental.id}"
+
+    context = {
+        'rental': rental,
+        'tracking_url': tracking_url,
+        'company_name': 'Universal Rent a Car',
+        'company_email': 'universal.r.car@gmail.com',
+        'company_phone1': '(+238) 978 13 04',
+        'company_phone2': '(+238) 347 6581',
+    }
+
+    html_body = render_to_string('vehicle_rental/email/rental_booking.html', context)
+    # Plain-text fallback
+    text_body = (
+        f'Olá {customer.full_name},\n\n'
+        f'A sua reserva #{rental.id} foi criada com sucesso.\n'
+        f'Veículo: {rental.vehicle.brand.name} {rental.vehicle.model} ({rental.vehicle.year})\n'
+        f'Período: {rental.start_date:%d/%m/%Y} - {rental.end_date:%d/%m/%Y}\n'
+        f'Status: Pendente de Confirmação\n\n'
+        f'Acompanhe sua reserva em: {tracking_url}\n\n'
+        f'Obrigado!'
+    )
+
+    # Create notification record
+    notification = CustomerNotification.objects.create(
+        customer=customer,
+        rental=rental,
+        notification_type='rental_booking',
+        recipient_email=customer.email,
+        subject=subject,
+        content=text_body,
+        html_content=html_body,
+        status='pending'
+    )
+    
+    # Attempt to send
+    success, error_msg = notification.send()
+    
+    if not success:
+        logger.error(f'Rental #{rental.id}: failed to send booking email - {error_msg}')
+
+
+def _send_rental_confirmation_email(rental):
+    """Send confirmation email with reservation details and invoice to customer."""
+    customer = rental.customer
+    if not customer.email:
+        logger.warning('Rental #%s: customer has no email, skipping notification.', rental.id)
+        return
+
+    # Calculate commission value for percentage-based commission
+    commission_value = 0
+    if rental.commission_percent and rental.base_amount:
+        commission_value = (rental.base_amount * rental.commission_percent) / 100
+
+    subject = f'Confirmação de Reserva #{rental.id} - {rental.vehicle.brand.name} {rental.vehicle.model}'
+
+    context = {
+        'rental': rental,
+        'commission_value': commission_value,
+        'company_name': 'Universal Rent a Car',
+        'company_email': 'universal.r.car@gmail.com',
+        'company_phone1': '(+238) 978 13 04',
+        'company_phone2': '(+238) 347 6581',
+    }
+
+    html_body = render_to_string('vehicle_rental/email/rental_confirmation.html', context)
+    # Plain-text fallback
+    text_body = (
+        f'Olá {customer.full_name},\n\n'
+        f'A sua reserva #{rental.id} foi confirmada.\n'
+        f'Veículo: {rental.vehicle.brand.name} {rental.vehicle.model} ({rental.vehicle.year})\n'
+        f'Período: {rental.start_date:%d/%m/%Y} - {rental.end_date:%d/%m/%Y}\n'
+        f'Total: {rental.total_amount} {rental.currency}\n\n'
+        f'Obrigado!'
+    )
+
+    # Create notification record
+    notification = CustomerNotification.objects.create(
+        customer=customer,
+        rental=rental,
+        notification_type='rental_confirmation',
+        recipient_email=customer.email,
+        subject=subject,
+        content=text_body,
+        html_content=html_body,
+        status='pending'
+    )
+    
+    # Attempt to send
+    success, error_msg = notification.send()
+    
+    if not success:
+        logger.error(f'Rental #{rental.id}: failed to send confirmation email - {error_msg}')
+
+
+def _send_rental_return_email(rental, request):
+    """Send return completion email with evaluation link to customer."""
+    customer = rental.customer
+    if not customer.email:
+        logger.warning('Rental #%s: customer has no email, skipping return notification.', rental.id)
+        return
+
+    subject = f'Devolução Concluída - Reserva #{rental.id}'
+
+    # Generate evaluation URL for customer to rate the rental
+    dashboard_url = os.environ.get('CUSTOMER_DASHBOARD_URL', 'http://localhost:8080/universal-rent-a-car/owner-dashboard')
+    evaluation_url = f"{dashboard_url}?tab=my-bookings"
+
+    context = {
+        'rental': rental,
+        'evaluation_url': evaluation_url,
+        'company_name': 'Universal Rent a Car',
+        'company_email': 'universal.r.car@gmail.com',
+        'company_phone1': '(+238) 978 13 04',
+        'company_phone2': '(+238) 347 6581',
+    }
+
+    html_body = render_to_string('vehicle_rental/email/rental_return.html', context)
+    # Plain-text fallback
+    text_body = (
+        f'Olá {customer.full_name},\n\n'
+        f'A devolução da reserva #{rental.id} foi concluída.\n'
+        f'Veículo: {rental.vehicle.brand.name} {rental.vehicle.model} ({rental.vehicle.year})\n'
+        f'Data de Devolução: {rental.actual_return_date:%d/%m/%Y %H:%M}\n\n'
+        f'Avalie sua experiência: {evaluation_url}\n\n'
+        f'Obrigado por escolher a Universal Rent a Car!'
+    )
+
+    # Create notification record
+    notification = CustomerNotification.objects.create(
+        customer=customer,
+        rental=rental,
+        notification_type='rental_return',
+        recipient_email=customer.email,
+        subject=subject,
+        content=text_body,
+        html_content=html_body,
+        status='pending'
+    )
+    
+    # Attempt to send
+    success, error_msg = notification.send()
+    
+    if not success:
+        logger.error(f'Rental #{rental.id}: failed to send return email - {error_msg}')
+
+
+def _send_welcome_email(customer, request=None):
+    """Send welcome email to newly registered customer."""
+    if not customer.email:
+        logger.warning('Customer #%s: has no email, skipping welcome notification.', customer.id)
+        return
+
+    subject = f'Bem-vindo à Universal Rent a Car!'
+
+    # Generate portal URL
+    portal_url = request.build_absolute_uri('/') if request else 'https://universalrentacar.cv'
+
+    context = {
+        'customer': customer,
+        'portal_url': portal_url,
+        'company_name': 'Universal Rent a Car',
+        'company_email': 'universal.r.car@gmail.com',
+        'company_phone1': '(+238) 978 13 04',
+        'company_phone2': '(+238) 347 6581',
+        'current_year': timezone.now().year,
+    }
+
+    html_body = render_to_string('vehicle_rental/email/customer_welcome.html', context)
+    # Plain-text fallback
+    text_body = (
+        f'Olá {customer.full_name},\n\n'
+        f'Bem-vindo à Universal Rent a Car!\n'
+        f'Estamos felizes por tê-lo como nosso cliente.\n\n'
+        f'Detalhes da Conta:\n'
+        f'Nome: {customer.full_name}\n'
+        f'Email: {customer.email}\n'
+        f'Telefone: {customer.phone}\n\n'
+        f'Acesse nosso portal: {portal_url}\n\n'
+        f'Obrigado por escolher a Universal Rent a Car!'
+    )
+
+    # Create notification record
+    notification = CustomerNotification.objects.create(
+        customer=customer,
+        rental=None,
+        notification_type='customer_welcome',
+        recipient_email=customer.email,
+        subject=subject,
+        content=text_body,
+        html_content=html_body,
+        status='pending'
+    )
+    
+    # Attempt to send
+    success, error_msg = notification.send()
+    
+    if not success:
+        logger.error(f'Customer #{customer.id}: failed to send welcome email - {error_msg}')
 
 
 @login_required
@@ -737,6 +981,9 @@ def rental_confirm(request, pk):
             rental.save()
             
             # Vehicle status will be updated automatically by signals
+            
+            # Send confirmation email to customer
+            _send_rental_confirmation_email(rental)
             
             messages.success(request, f'Aluguer #{rental.id} foi confirmado com sucesso!')
         else:
@@ -861,6 +1108,13 @@ def rental_return(request, pk):
                     rental.notes = (rental.notes or '') + f'\nDevolução: {notes}'
                 
                 rental.save()
+                
+                # Send return completion notification email
+                try:
+                    _send_rental_return_email(rental, request)
+                except Exception as e:
+                    logger.error(f'Failed to send return email for rental #{rental.id}: {str(e)}')
+                    # Don't prevent return completion if email fails
                 
                 # Vehicle status will be updated automatically by signals
                 
@@ -1545,7 +1799,8 @@ def reports_dashboard(request):
     
     # Base querysets with date filtering
     rentals_qs = Rental.objects.filter(
-        start_date__date__range=[date_from, date_to]
+        start_date__date__range=[date_from, date_to],
+        status__in=['confirmed', 'active', 'completed']
     )
     
     expenses_qs = Expense.objects.filter(
@@ -1616,9 +1871,9 @@ def reports_dashboard(request):
     top_vehicles = Vehicle.objects.filter(
         rentals__start_date__date__range=[date_from, date_to]
     ).annotate(
-        rental_count=Count('rentals'),
-        total_revenue=Sum('rentals__total_amount'),
-        avg_daily_rate=Avg('rentals__daily_rate')
+        rental_count=Count('rentals', filter=Q(rentals__status__in=['confirmed', 'active', 'completed'])),
+        total_revenue=Sum('rentals__total_amount', filter=Q(rentals__status__in=['confirmed', 'active', 'completed'])),
+        avg_daily_rate=Avg('rentals__daily_rate', filter=Q(rentals__status__in=['confirmed', 'active', 'completed']))
     ).annotate(
         # Calculate utilization as percentage of days rented vs total days in period
         utilization=F('rental_count') * 100 / ((date_to - date_from).days + 1)
@@ -1628,9 +1883,9 @@ def reports_dashboard(request):
     top_customers = Customer.objects.filter(
         rentals__start_date__date__range=[date_from, date_to]
     ).annotate(
-        rental_count=Count('rentals'),
-        total_spent=Sum('rentals__total_amount'),
-        avg_days=Avg('rentals__number_of_days')
+        rental_count=Count('rentals', filter=Q(rentals__status__in=['confirmed', 'active', 'completed'])),
+        total_spent=Sum('rentals__total_amount', filter=Q(rentals__status__in=['confirmed', 'active', 'completed'])),
+        avg_days=Avg('rentals__number_of_days', filter=Q(rentals__status__in=['confirmed', 'active', 'completed']))
     ).order_by('-total_spent')[:10]
     
     # Convert avg_days to numeric for top customers
@@ -1662,7 +1917,8 @@ def reports_dashboard(request):
             month_end = month_start.replace(month=month_start.month + 1, day=1) - timedelta(days=1)
         
         month_data = Rental.objects.filter(
-            start_date__date__range=[month_start, month_end]
+            start_date__date__range=[month_start, month_end],
+            status__in=['confirmed', 'active', 'completed']
         ).aggregate(
             revenue=Sum('total_amount'),
             commission=Sum('commission_amount')
@@ -1720,7 +1976,7 @@ def revenue_report(request):
     # Revenue data
     rentals = Rental.objects.filter(
         start_date__date__range=[start_date, end_date],
-        status__in=['completed', 'active']
+        status__in=['confirmed', 'active', 'completed']
     )
     
     total_revenue = rentals.aggregate(total=Sum('total_amount'))['total'] or 0
@@ -1753,7 +2009,7 @@ def vehicle_utilization_report(request):
         total_days = 30  # Last 30 days
         rental_days = vehicle.rentals.filter(
             start_date__gte=timezone.now() - timedelta(days=30),
-            status__in=['completed', 'active']
+            status__in=['confirmed', 'active', 'completed']
         ).aggregate(
             total=Sum('number_of_days')
         )['total'] or 0
@@ -2247,6 +2503,16 @@ class RentalViewSet(viewsets.ModelViewSet):
     queryset = Rental.objects.select_related('customer', 'vehicle')
     serializer_class = RentalSerializer
     
+    def perform_create(self, serializer):
+        """Send booking notification after creating rental via API"""
+        rental = serializer.save()
+        try:
+            _send_rental_booking_email(rental, self.request)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send booking email for rental {rental.id}: {str(e)}")
+    
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):
         """Confirm a pending rental"""
@@ -2255,6 +2521,14 @@ class RentalViewSet(viewsets.ModelViewSet):
         if rental.status == 'pending':
             rental.status = 'confirmed'
             rental.save()
+            
+            # Send confirmation email
+            try:
+                _send_rental_confirmation_email(rental)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send confirmation email for rental {rental.id}: {str(e)}")
             
             return Response({
                 'status': 'success',
@@ -2340,6 +2614,14 @@ class RentalViewSet(viewsets.ModelViewSet):
                 rental.additional_charges = additional_charges
             
             rental.save()
+            
+            # Send return email with evaluation link
+            try:
+                _send_rental_return_email(rental, request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send return email for rental {rental.id}: {str(e)}")
             
             return Response({
                 'status': 'success',
@@ -2631,10 +2913,8 @@ class VehiclePhotoViewSet(viewsets.ModelViewSet):
 def api_create_brand(request):
     """API endpoint to create a new vehicle brand"""
     if request.method == 'POST':
-        import json
         try:
-            data = json.loads(request.body)
-            brand_name = data.get('name', '').strip()
+            brand_name = request.POST.get('name', '').strip()
             
             if not brand_name:
                 return JsonResponse({'error': 'Brand name is required'}, status=400)
@@ -2649,11 +2929,10 @@ def api_create_brand(request):
             return JsonResponse({
                 'id': brand.id,
                 'name': brand.name,
-                'success': True
+                'success': True,
+                'brand': {'id': brand.id, 'name': brand.name}
             })
             
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     
@@ -2711,12 +2990,12 @@ def rental_invoice(request, pk):
     context = {
         'invoice_data': invoice_data,
         'company_info': {
-            'name': 'BoZ Rental Services',
-            'address': 'Rua Principal, 123',
-            'city': 'Lisboa, Portugal',
-            'phone': '+351 123 456 789',
-            'email': 'info@bozrental.pt',
-            'vat_number': 'PT123456789'
+            'name': 'Universal Rent a Car',
+            'address': 'Achada Santo António',
+            'city': 'Praia, Cabo Verde',
+            'phone': '(+238) 978 13 04 / (+238) 347 6581',
+            'email': 'universal.r.car@gmail.com',
+            'vat_number': ''
         }
     }
     
@@ -2935,6 +3214,14 @@ class CustomerRegistrationViewSet(viewsets.GenericViewSet):
             
         if serializer.is_valid():
             customer = serializer.save()
+            
+            # Send welcome email
+            try:
+                _send_welcome_email(customer, request)
+            except Exception as e:
+                logger.error(f'Failed to send welcome email for customer #{customer.id}: {str(e)}')
+                # Don't prevent registration if email fails
+            
             from .serializers import CustomerDetailSerializer
             response_serializer = CustomerDetailSerializer(customer)
             return Response({
@@ -2978,13 +3265,15 @@ class CustomerRegistrationViewSet(viewsets.GenericViewSet):
             return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-class CustomerRentalViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet for customers to view their rentals"""
+class CustomerRentalViewSet(viewsets.ModelViewSet):
+    """ViewSet for customers to manage their rentals"""
     serializer_class = None  # Will be set in get_serializer_class
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
-        from .serializers import CustomerRentalSerializer
+        from .serializers import CustomerRentalSerializer, RentalSerializer
+        if self.action == 'create':
+            return RentalSerializer
         return CustomerRentalSerializer
     
     def get_queryset(self):
@@ -2995,6 +3284,38 @@ class CustomerRentalViewSet(viewsets.ReadOnlyModelViewSet):
             ).order_by('-created_at')
         except Customer.DoesNotExist:
             return Rental.objects.none()
+    
+    def create(self, request):
+        """Create a new rental for the authenticated customer"""
+        try:
+            customer = request.user.customer_profile
+        except Customer.DoesNotExist:
+            return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Add customer to rental data
+        rental_data = request.data.copy()
+        rental_data['customer'] = customer.id
+        
+        from .serializers import RentalSerializer
+        serializer = RentalSerializer(data=rental_data, context={'request': request})
+        if serializer.is_valid():
+            rental = serializer.save()
+            
+            # Send booking notification email
+            try:
+                _send_rental_booking_email(rental, request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send booking email for rental {rental.id}: {str(e)}")
+            
+            from .serializers import CustomerRentalSerializer
+            return Response({
+                'message': 'Rental created successfully',
+                'rental': CustomerRentalSerializer(rental, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['get'])
     def active(self, request):
@@ -3081,6 +3402,41 @@ class CustomerRentalEvaluationViewSet(viewsets.ModelViewSet):
                 'evaluation': serializer.data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomerNotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for retrieving customer notifications"""
+    serializer_class = None  # Will be set in get_serializer_class
+    permission_classes = []  # Allow unauthenticated access (customer_id in URL)
+    
+    def get_serializer_class(self):
+        from .serializers import CustomerNotificationSerializer
+        return CustomerNotificationSerializer
+    
+    def get_queryset(self):
+        """Return notifications for the specified customer"""
+        customer_id = self.kwargs.get('customer_id')
+        if customer_id:
+            return CustomerNotification.objects.filter(
+                customer_id=customer_id
+            ).order_by('-created_at')
+        return CustomerNotification.objects.none()
+    
+    def list(self, request, customer_id=None):
+        """List all notifications for a customer, ordered by most recent"""
+        if not customer_id:
+            return Response({
+                'error': 'Customer ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        
+        return Response({
+            'customer_id': customer_id,
+            'total_notifications': queryset.count(),
+            'notifications': serializer.data
+        })
 
 
 class VehicleAvailabilityViewSet(viewsets.ReadOnlyModelViewSet):
@@ -3327,29 +3683,60 @@ def request_password_reset(request):
     
     # Send OTP via email
     try:
-        subject = 'Password Recovery Code - Vehicle Rental System'
-        message = f'''
-Hello {customer.first_name or customer.email},
+        from django.template.loader import render_to_string
+        from urllib.parse import urlencode
+        
+        # Get password recovery URL from settings/env
+        recovery_base_url = os.environ.get('PASSWORD_RECOVERY_URL', 'http://localhost:8080/universal-rent-a-car/forgot-password-recovery')
+        
+        # Build recovery URL with email and OTP parameters
+        params = urlencode({'email': email, 'otp': otp})
+        recovery_url = f"{recovery_base_url}?{params}"
+        
+        subject = 'Recuperação de Senha - Universal Rent a Car'
+        
+        # Render HTML template
+        context = {
+            'customer': customer,
+            'otp': otp,
+            'recovery_url': recovery_url,
+            'company_name': 'Universal Rent a Car',
+            'company_email': 'universal.r.car@gmail.com',
+            'company_phone1': '(+238) 978 13 04',
+            'company_phone2': '(+238) 347 6581',
+        }
+        
+        html_body = render_to_string('vehicle_rental/email/password_recovery.html', context)
+        
+        # Plain-text fallback
+        text_body = f'''
+Olá {customer.full_name},
 
-You have requested a password reset for your account.
+Recebemos um pedido de recuperação de senha para a sua conta.
 
-Your verification code is: {otp}
+O seu código de verificação é: {otp}
 
-This code will expire in 15 minutes for security reasons.
+Ou clique no link abaixo para redefinir a senha directamente:
+{recovery_url}
 
-If you did not request this password reset, please ignore this email.
+Este código expira em 15 minutos por motivos de segurança.
 
-Best regards,
-Vehicle Rental System Team
+Se não solicitou esta recuperação de senha, ignore este email.
+
+Atenciosamente,
+Universal Rent a Car
         '''
         
-        send_mail(
+        from django.core.mail import EmailMultiAlternatives
+        
+        msg = EmailMultiAlternatives(
             subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@vehiclerental.com',
-            recipient_list=[email],
-            fail_silently=False,  # Show email errors for debugging
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@universalrentacar.com',
+            to=[email]
         )
+        msg.attach_alternative(html_body, "text/html")
+        msg.send(fail_silently=False)
         
         # Check if we're in development mode (console backend)
         is_console_backend = getattr(settings, 'EMAIL_BACKEND', '') == 'django.core.mail.backends.console.EmailBackend'
@@ -3524,3 +3911,249 @@ class SystemConfigurationViewSet(viewsets.ReadOnlyModelViewSet):
         config = self.get_object()
         serializer = self.get_serializer(config)
         return Response(serializer.data)
+
+
+# ============================================================
+# Parameterization Views (Gestão de Parametrizações)
+# ============================================================
+
+# --- Vehicle Brands ---
+@login_required
+def brand_list(request):
+    brands = VehicleBrand.objects.all().annotate(vehicle_count=Count('vehicles'))
+    context = {'brands': brands, 'segment': 'param_brands'}
+    return render(request, 'vehicle_rental/param/brand_list.html', context)
+
+@login_required
+def brand_create(request):
+    if request.method == 'POST':
+        form = VehicleBrandForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Marca criada com sucesso.')
+            return redirect('vehicle_rental:brand_list')
+    else:
+        form = VehicleBrandForm()
+    return render(request, 'vehicle_rental/param/brand_form.html', {'form': form, 'segment': 'param_brands', 'title': 'Nova Marca'})
+
+@login_required
+def brand_edit(request, pk):
+    brand = get_object_or_404(VehicleBrand, pk=pk)
+    if request.method == 'POST':
+        form = VehicleBrandForm(request.POST, instance=brand)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Marca atualizada com sucesso.')
+            return redirect('vehicle_rental:brand_list')
+    else:
+        form = VehicleBrandForm(instance=brand)
+    return render(request, 'vehicle_rental/param/brand_form.html', {'form': form, 'segment': 'param_brands', 'title': 'Editar Marca'})
+
+@login_required
+def brand_delete(request, pk):
+    brand = get_object_or_404(VehicleBrand, pk=pk)
+    if request.method == 'POST':
+        brand.delete()
+        messages.success(request, 'Marca eliminada com sucesso.')
+    return redirect('vehicle_rental:brand_list')
+
+
+# --- Delivery Locations ---
+@login_required
+def location_list(request):
+    locations = DeliveryLocation.objects.all()
+    context = {'locations': locations, 'segment': 'param_locations'}
+    return render(request, 'vehicle_rental/param/location_list.html', context)
+
+@login_required
+def location_create(request):
+    if request.method == 'POST':
+        form = DeliveryLocationForm(request.POST)
+        if form.is_valid():
+            location = form.save(commit=False)
+            location.created_by = request.user
+            location.save()
+            messages.success(request, 'Local criado com sucesso.')
+            return redirect('vehicle_rental:location_list')
+    else:
+        form = DeliveryLocationForm()
+    return render(request, 'vehicle_rental/param/location_form.html', {'form': form, 'segment': 'param_locations', 'title': 'Novo Local'})
+
+@login_required
+def location_edit(request, pk):
+    location = get_object_or_404(DeliveryLocation, pk=pk)
+    if request.method == 'POST':
+        form = DeliveryLocationForm(request.POST, instance=location)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Local atualizado com sucesso.')
+            return redirect('vehicle_rental:location_list')
+    else:
+        form = DeliveryLocationForm(instance=location)
+    return render(request, 'vehicle_rental/param/location_form.html', {'form': form, 'segment': 'param_locations', 'title': 'Editar Local'})
+
+@login_required
+def location_delete(request, pk):
+    location = get_object_or_404(DeliveryLocation, pk=pk)
+    if request.method == 'POST':
+        location.delete()
+        messages.success(request, 'Local eliminado com sucesso.')
+    return redirect('vehicle_rental:location_list')
+
+
+# --- Expense Categories ---
+@login_required
+def expense_category_list(request):
+    categories = ExpenseCategory.objects.all().annotate(expense_count=Count('expenses'))
+    context = {'categories': categories, 'segment': 'param_expense_categories'}
+    return render(request, 'vehicle_rental/param/expense_category_list.html', context)
+
+@login_required
+def expense_category_create(request):
+    if request.method == 'POST':
+        form = ExpenseCategoryForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Categoria criada com sucesso.')
+            return redirect('vehicle_rental:expense_category_list')
+    else:
+        form = ExpenseCategoryForm()
+    return render(request, 'vehicle_rental/param/expense_category_form.html', {'form': form, 'segment': 'param_expense_categories', 'title': 'Nova Categoria'})
+
+@login_required
+def expense_category_edit(request, pk):
+    category = get_object_or_404(ExpenseCategory, pk=pk)
+    if request.method == 'POST':
+        form = ExpenseCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Categoria atualizada com sucesso.')
+            return redirect('vehicle_rental:expense_category_list')
+    else:
+        form = ExpenseCategoryForm(instance=category)
+    return render(request, 'vehicle_rental/param/expense_category_form.html', {'form': form, 'segment': 'param_expense_categories', 'title': 'Editar Categoria'})
+
+@login_required
+def expense_category_delete(request, pk):
+    category = get_object_or_404(ExpenseCategory, pk=pk)
+    if request.method == 'POST':
+        category.delete()
+        messages.success(request, 'Categoria eliminada com sucesso.')
+    return redirect('vehicle_rental:expense_category_list')
+
+
+# --- System Configuration ---
+@login_required
+def system_config_edit(request):
+    config = SystemConfiguration.objects.first()
+    if not config:
+        config = SystemConfiguration.objects.create()
+    if request.method == 'POST':
+        form = SystemConfigurationForm(request.POST, instance=config)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.updated_by = request.user
+            obj.save()
+            messages.success(request, 'Configurações atualizadas com sucesso.')
+            return redirect('vehicle_rental:system_config')
+    else:
+        form = SystemConfigurationForm(instance=config)
+    return render(request, 'vehicle_rental/param/system_config.html', {'form': form, 'config': config, 'segment': 'param_system_config'})
+
+
+# --- Customer Notifications ---
+@login_required
+def notification_list(request):
+    """List all customer notifications with filtering"""
+    notifications = CustomerNotification.objects.select_related(
+        'customer', 'rental', 'created_by'
+    ).all()
+    
+    # Filtering
+    status_filter = request.GET.get('status', '')
+    type_filter = request.GET.get('type', '')
+    search_query = request.GET.get('q', '')
+    
+    if status_filter:
+        notifications = notifications.filter(status=status_filter)
+    
+    if type_filter:
+        notifications = notifications.filter(notification_type=type_filter)
+    
+    if search_query:
+        notifications = notifications.filter(
+            Q(customer__first_name__icontains=search_query) |
+            Q(customer__last_name__icontains=search_query) |
+            Q(recipient_email__icontains=search_query) |
+            Q(subject__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(notifications, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    stats = {
+        'total': CustomerNotification.objects.count(),
+        'sent': CustomerNotification.objects.filter(status='sent').count(),
+        'failed': CustomerNotification.objects.filter(status='failed').count(),
+        'pending': CustomerNotification.objects.filter(status='pending').count(),
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'notifications': page_obj.object_list,
+        'stats': stats,
+        'status_filter': status_filter,
+        'type_filter': type_filter,
+        'search_query': search_query,
+        'status_choices': CustomerNotification.STATUS_CHOICES,
+        'type_choices': CustomerNotification.TYPE_CHOICES,
+        'segment': 'notifications',
+    }
+    
+    return render(request, 'vehicle_rental/notification_list.html', context)
+
+
+@login_required
+def notification_detail(request, pk):
+    """View detailed notification information"""
+    notification = get_object_or_404(
+        CustomerNotification.objects.select_related('customer', 'rental', 'created_by'),
+        pk=pk
+    )
+    
+    context = {
+        'notification': notification,
+        'segment': 'notifications',
+    }
+    
+    return render(request, 'vehicle_rental/notification_detail.html', context)
+
+
+@login_required
+def notification_resend(request, pk):
+    """Resend a failed notification"""
+    notification = get_object_or_404(CustomerNotification, pk=pk)
+    
+    if request.method == 'POST':
+        success, error_msg = notification.send(user=request.user)
+        
+        if success:
+            messages.success(request, f'Notificação #{notification.id} reenviada com sucesso!')
+        else:
+            messages.error(request, f'Erro ao reenviar notificação: {error_msg}')
+        
+        # Redirect based on referrer
+        next_url = request.POST.get('next') or request.GET.get('next')
+        if next_url:
+            return redirect(next_url)
+        return redirect('vehicle_rental:notification_detail', pk=notification.pk)
+    
+    context = {
+        'notification': notification,
+        'segment': 'notifications',
+    }
+    
+    return render(request, 'vehicle_rental/notification_resend_confirm.html', context)
