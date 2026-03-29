@@ -1258,6 +1258,7 @@ class CustomerNotification(models.Model):
     ]
     
     TYPE_CHOICES = [
+        ('customer_welcome', _('Boas-Vindas')),
         ('rental_booking', _('Reserva de Aluguer')),
         ('rental_confirmation', _('Confirmação de Aluguer')),
         ('rental_return', _('Devolução de Aluguer')),

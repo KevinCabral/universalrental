@@ -1,3 +1,4 @@
+import os
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate
@@ -16,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
 from .models import (
-    Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand, 
+    Vehicle, Customer, Rental, Expense, MaintenanceRecord, VehicleBrand,
     ExpenseCategory, RentalPhoto, RentalEvaluation, VehiclePhoto, DeliveryLocation,
     SystemConfiguration, CustomerNotification
 )
@@ -498,6 +499,14 @@ def customer_create(request):
         form = CustomerForm(request.POST)
         if form.is_valid():
             customer = form.save()
+
+            # Send welcome email
+            try:
+                _send_welcome_email(customer, request)
+            except Exception as e:
+                logger.error(f'Failed to send welcome email for customer #{customer.id}: {str(e)}')
+                # Don't prevent customer creation if email fails
+            
             messages.success(request, f'Customer "{customer.full_name}" has been created successfully!')
             return redirect('vehicle_rental:customer_detail', pk=customer.pk)
     else:
@@ -759,7 +768,8 @@ def _send_rental_booking_email(rental, request):
     subject = f'Nova Reserva #{rental.id} - {rental.vehicle.brand.name} {rental.vehicle.model}'
 
     # Generate tracking URL for customer to check booking status
-    tracking_url = request.build_absolute_uri(f'/api/customer/rentals/{rental.id}/')
+    booking_status_url = os.environ.get('BOOKING_STATUS_URL', 'http://localhost:8080/universal-rent-a-car/booking-status')
+    tracking_url = f"{booking_status_url}?rental_id={rental.id}"
 
     context = {
         'rental': rental,
@@ -864,7 +874,8 @@ def _send_rental_return_email(rental, request):
     subject = f'Devolução Concluída - Reserva #{rental.id}'
 
     # Generate evaluation URL for customer to rate the rental
-    evaluation_url = request.build_absolute_uri(f'/api/customer/evaluations/?rental_id={rental.id}')
+    dashboard_url = os.environ.get('CUSTOMER_DASHBOARD_URL', 'http://localhost:8080/universal-rent-a-car/owner-dashboard')
+    evaluation_url = f"{dashboard_url}?tab=my-bookings"
 
     context = {
         'rental': rental,
@@ -903,6 +914,60 @@ def _send_rental_return_email(rental, request):
     
     if not success:
         logger.error(f'Rental #{rental.id}: failed to send return email - {error_msg}')
+
+
+def _send_welcome_email(customer, request=None):
+    """Send welcome email to newly registered customer."""
+    if not customer.email:
+        logger.warning('Customer #%s: has no email, skipping welcome notification.', customer.id)
+        return
+
+    subject = f'Bem-vindo à Universal Rent a Car!'
+
+    # Generate portal URL
+    portal_url = request.build_absolute_uri('/') if request else 'https://universalrentacar.cv'
+
+    context = {
+        'customer': customer,
+        'portal_url': portal_url,
+        'company_name': 'Universal Rent a Car',
+        'company_email': 'universal.r.car@gmail.com',
+        'company_phone1': '(+238) 978 13 04',
+        'company_phone2': '(+238) 347 6581',
+        'current_year': timezone.now().year,
+    }
+
+    html_body = render_to_string('vehicle_rental/email/customer_welcome.html', context)
+    # Plain-text fallback
+    text_body = (
+        f'Olá {customer.full_name},\n\n'
+        f'Bem-vindo à Universal Rent a Car!\n'
+        f'Estamos felizes por tê-lo como nosso cliente.\n\n'
+        f'Detalhes da Conta:\n'
+        f'Nome: {customer.full_name}\n'
+        f'Email: {customer.email}\n'
+        f'Telefone: {customer.phone}\n\n'
+        f'Acesse nosso portal: {portal_url}\n\n'
+        f'Obrigado por escolher a Universal Rent a Car!'
+    )
+
+    # Create notification record
+    notification = CustomerNotification.objects.create(
+        customer=customer,
+        rental=None,
+        notification_type='customer_welcome',
+        recipient_email=customer.email,
+        subject=subject,
+        content=text_body,
+        html_content=html_body,
+        status='pending'
+    )
+    
+    # Attempt to send
+    success, error_msg = notification.send()
+    
+    if not success:
+        logger.error(f'Customer #{customer.id}: failed to send welcome email - {error_msg}')
 
 
 @login_required
@@ -2438,6 +2503,16 @@ class RentalViewSet(viewsets.ModelViewSet):
     queryset = Rental.objects.select_related('customer', 'vehicle')
     serializer_class = RentalSerializer
     
+    def perform_create(self, serializer):
+        """Send booking notification after creating rental via API"""
+        rental = serializer.save()
+        try:
+            _send_rental_booking_email(rental, self.request)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send booking email for rental {rental.id}: {str(e)}")
+    
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):
         """Confirm a pending rental"""
@@ -2446,6 +2521,14 @@ class RentalViewSet(viewsets.ModelViewSet):
         if rental.status == 'pending':
             rental.status = 'confirmed'
             rental.save()
+            
+            # Send confirmation email
+            try:
+                _send_rental_confirmation_email(rental)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send confirmation email for rental {rental.id}: {str(e)}")
             
             return Response({
                 'status': 'success',
@@ -2531,6 +2614,14 @@ class RentalViewSet(viewsets.ModelViewSet):
                 rental.additional_charges = additional_charges
             
             rental.save()
+            
+            # Send return email with evaluation link
+            try:
+                _send_rental_return_email(rental, request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send return email for rental {rental.id}: {str(e)}")
             
             return Response({
                 'status': 'success',
@@ -3123,6 +3214,14 @@ class CustomerRegistrationViewSet(viewsets.GenericViewSet):
             
         if serializer.is_valid():
             customer = serializer.save()
+            
+            # Send welcome email
+            try:
+                _send_welcome_email(customer, request)
+            except Exception as e:
+                logger.error(f'Failed to send welcome email for customer #{customer.id}: {str(e)}')
+                # Don't prevent registration if email fails
+            
             from .serializers import CustomerDetailSerializer
             response_serializer = CustomerDetailSerializer(customer)
             return Response({
@@ -3166,13 +3265,15 @@ class CustomerRegistrationViewSet(viewsets.GenericViewSet):
             return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-class CustomerRentalViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet for customers to view their rentals"""
+class CustomerRentalViewSet(viewsets.ModelViewSet):
+    """ViewSet for customers to manage their rentals"""
     serializer_class = None  # Will be set in get_serializer_class
     permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
-        from .serializers import CustomerRentalSerializer
+        from .serializers import CustomerRentalSerializer, RentalSerializer
+        if self.action == 'create':
+            return RentalSerializer
         return CustomerRentalSerializer
     
     def get_queryset(self):
@@ -3183,6 +3284,38 @@ class CustomerRentalViewSet(viewsets.ReadOnlyModelViewSet):
             ).order_by('-created_at')
         except Customer.DoesNotExist:
             return Rental.objects.none()
+    
+    def create(self, request):
+        """Create a new rental for the authenticated customer"""
+        try:
+            customer = request.user.customer_profile
+        except Customer.DoesNotExist:
+            return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Add customer to rental data
+        rental_data = request.data.copy()
+        rental_data['customer'] = customer.id
+        
+        from .serializers import RentalSerializer
+        serializer = RentalSerializer(data=rental_data, context={'request': request})
+        if serializer.is_valid():
+            rental = serializer.save()
+            
+            # Send booking notification email
+            try:
+                _send_rental_booking_email(rental, request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send booking email for rental {rental.id}: {str(e)}")
+            
+            from .serializers import CustomerRentalSerializer
+            return Response({
+                'message': 'Rental created successfully',
+                'rental': CustomerRentalSerializer(rental, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['get'])
     def active(self, request):
@@ -3269,6 +3402,41 @@ class CustomerRentalEvaluationViewSet(viewsets.ModelViewSet):
                 'evaluation': serializer.data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomerNotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for retrieving customer notifications"""
+    serializer_class = None  # Will be set in get_serializer_class
+    permission_classes = []  # Allow unauthenticated access (customer_id in URL)
+    
+    def get_serializer_class(self):
+        from .serializers import CustomerNotificationSerializer
+        return CustomerNotificationSerializer
+    
+    def get_queryset(self):
+        """Return notifications for the specified customer"""
+        customer_id = self.kwargs.get('customer_id')
+        if customer_id:
+            return CustomerNotification.objects.filter(
+                customer_id=customer_id
+            ).order_by('-created_at')
+        return CustomerNotification.objects.none()
+    
+    def list(self, request, customer_id=None):
+        """List all notifications for a customer, ordered by most recent"""
+        if not customer_id:
+            return Response({
+                'error': 'Customer ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        
+        return Response({
+            'customer_id': customer_id,
+            'total_notifications': queryset.count(),
+            'notifications': serializer.data
+        })
 
 
 class VehicleAvailabilityViewSet(viewsets.ReadOnlyModelViewSet):
@@ -3515,29 +3683,60 @@ def request_password_reset(request):
     
     # Send OTP via email
     try:
-        subject = 'Password Recovery Code - Vehicle Rental System'
-        message = f'''
-Hello {customer.first_name or customer.email},
+        from django.template.loader import render_to_string
+        from urllib.parse import urlencode
+        
+        # Get password recovery URL from settings/env
+        recovery_base_url = os.environ.get('PASSWORD_RECOVERY_URL', 'http://localhost:8080/universal-rent-a-car/forgot-password-recovery')
+        
+        # Build recovery URL with email and OTP parameters
+        params = urlencode({'email': email, 'otp': otp})
+        recovery_url = f"{recovery_base_url}?{params}"
+        
+        subject = 'Recuperação de Senha - Universal Rent a Car'
+        
+        # Render HTML template
+        context = {
+            'customer': customer,
+            'otp': otp,
+            'recovery_url': recovery_url,
+            'company_name': 'Universal Rent a Car',
+            'company_email': 'universal.r.car@gmail.com',
+            'company_phone1': '(+238) 978 13 04',
+            'company_phone2': '(+238) 347 6581',
+        }
+        
+        html_body = render_to_string('vehicle_rental/email/password_recovery.html', context)
+        
+        # Plain-text fallback
+        text_body = f'''
+Olá {customer.full_name},
 
-You have requested a password reset for your account.
+Recebemos um pedido de recuperação de senha para a sua conta.
 
-Your verification code is: {otp}
+O seu código de verificação é: {otp}
 
-This code will expire in 15 minutes for security reasons.
+Ou clique no link abaixo para redefinir a senha directamente:
+{recovery_url}
 
-If you did not request this password reset, please ignore this email.
+Este código expira em 15 minutos por motivos de segurança.
 
-Best regards,
-Vehicle Rental System Team
+Se não solicitou esta recuperação de senha, ignore este email.
+
+Atenciosamente,
+Universal Rent a Car
         '''
         
-        send_mail(
+        from django.core.mail import EmailMultiAlternatives
+        
+        msg = EmailMultiAlternatives(
             subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@vehiclerental.com',
-            recipient_list=[email],
-            fail_silently=False,  # Show email errors for debugging
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@universalrentacar.com',
+            to=[email]
         )
+        msg.attach_alternative(html_body, "text/html")
+        msg.send(fail_silently=False)
         
         # Check if we're in development mode (console backend)
         is_console_backend = getattr(settings, 'EMAIL_BACKEND', '') == 'django.core.mail.backends.console.EmailBackend'

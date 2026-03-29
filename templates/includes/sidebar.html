@@ -43,7 +43,7 @@
       {% if request.user.is_superuser %}  
 
       <!-- Visual Section Divider for Admin -->
-      <li class="pc-item" style="margin-bottom: 15px;">
+      <!--li class="pc-item" style="margin-bottom: 15px;">
         <div style="display: flex; align-items: center; margin: 10px 0;">
           <div style="flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);"></div>
           <span style="color: rgba(255,255,255,0.6); font-size: 10px; font-weight: 600; 
@@ -52,14 +52,14 @@
         </div>
       </li>
       
-      <li class="pc-item">
+      <li-- class="pc-item">
         <a href="{% url "admin:index" %}" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
           <span class="pc-micon">
             <i data-feather="settings" style="color: rgba(255,255,255,0.8);"></i>
           </span>
           <span class="pc-mtext" style="color: rgba(255,255,255,0.9); font-weight: 500;">Interface Superusuário</span>
         </a>
-      </li>
+      </li-->
       
       <!-- superuser guard -->  
       {% endif %}

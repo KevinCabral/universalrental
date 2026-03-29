@@ -96,6 +96,7 @@ urlpatterns = [
     path('api/customer/change-password/', views.change_password, name='customer_change_password'),
     path('api/customer/request-password-reset/', views.request_password_reset, name='request_password_reset'),
     path('api/customer/reset-password/', views.reset_password, name='reset_password'),
+    path('api/customer/<int:customer_id>/notifications/', views.CustomerNotificationViewSet.as_view({'get': 'list'}), name='customer-notifications'),
     path('api/customer/', include(customer_router.urls)),
     
     # Public API endpoints (no authentication required)
