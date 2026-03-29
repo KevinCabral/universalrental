@@ -5,7 +5,7 @@ from django.utils.safestring import mark_safe
 from .models import (
     VehicleBrand, Vehicle, Customer, Rental, 
     ExpenseCategory, Expense, MaintenanceRecord, RentalPhoto, RentalEvaluation, DeliveryLocation,
-    SystemConfiguration, CustomerNotification
+    SystemConfiguration
 )
 
 
@@ -497,60 +497,6 @@ class SystemConfigurationAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
-
-
-@admin.register(CustomerNotification)
-class CustomerNotificationAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', 'notification_type', 'customer_name', 'recipient_email', 
-        'status', 'attempt_count', 'created_at', 'sent_at', 'resend_action'
-    ]
-    list_filter = ['status', 'notification_type', 'created_at', 'sent_at']
-    search_fields = ['customer__first_name', 'customer__last_name', 'recipient_email', 'subject']
-    readonly_fields = [
-        'created_at', 'sent_at', 'attempt_count', 'created_by',
-        'customer', 'rental', 'notification_type', 'recipient_email',
-        'subject', 'content', 'html_content', 'error_message'
-    ]
-    date_hierarchy = 'created_at'
-    
-    fieldsets = (
-        ('Informações Básicas', {
-            'fields': ('customer', 'rental', 'notification_type', 'recipient_email')
-        }),
-        ('Conteúdo do Email', {
-            'fields': ('subject', 'content', 'html_content')
-        }),
-        ('Estado', {
-            'fields': ('status', 'attempt_count', 'error_message')
-        }),
-        ('Datas', {
-            'fields': ('created_at', 'sent_at', 'created_by')
-        })
-    )
-    
-    def customer_name(self, obj):
-        return obj.customer.full_name
-    customer_name.short_description = 'Cliente'
-    
-    def resend_action(self, obj):
-        """Show resend button for failed notifications"""
-        if obj.status == 'failed':
-            url = reverse('vehicle_rental:notification_resend', args=[obj.pk])
-            return format_html(
-                '<a class="button" href="{}">Reenviar</a>',
-                url
-            )
-        return '-'
-    resend_action.short_description = 'Ações'
-    
-    def has_add_permission(self, request):
-        # Don't allow manual creation - notifications are created automatically
-        return False
-    
-    def has_delete_permission(self, request, obj=None):
-        # Allow deletion for cleanup
-        return True
 
 
 # Custom admin site configuration

@@ -178,7 +178,7 @@
                         {% endfor %}
                       </div>
                     {% endif %}
-                    <small class="form-text text-muted">Use percentagem OU valor fixo {% if sys_config and sys_config.service_fee_percentage is not None %}(padrão do sistema: {{ sys_config.service_fee_percentage }}%){% endif %}</small>
+                    <small class="form-text text-muted">Use percentagem OU valor fixo (obrigatório)</small>
                   </div>
                 </div>
 
@@ -193,7 +193,7 @@
                         {% endfor %}
                       </div>
                     {% endif %}
-                    <small class="form-text text-muted">Use valor fixo OU percentagem {% if sys_config and sys_config.service_fee_amount is not None %}(padrão do sistema: {{ sys_config.service_fee_amount }} ECV){% endif %}</small>
+                    <small class="form-text text-muted">Use valor fixo OU percentagem (obrigatório)</small>
                   </div>
                 </div>
 
@@ -396,14 +396,8 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script id="rental-config"
-  data-driver-daily-rate="{{ sys_config.driver_daily_rate|default:'3000' }}"
-  data-car-seat-daily-rate="{{ sys_config.car_seat_daily_rate|default:'500' }}">
+<script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Read system config from data attributes
-    var configEl = document.getElementById('rental-config');
-    var SYS_DRIVER_RATE = parseFloat(configEl.getAttribute('data-driver-daily-rate')) || 3000;
-    var SYS_CAR_SEAT_RATE = parseFloat(configEl.getAttribute('data-car-seat-daily-rate')) || 500;
     // Initialize feather icons
     feather.replace();
     
@@ -429,13 +423,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalInput = document.getElementById('total');
     
     function calculateTotals() {
-        const startDate = startDateInput ? startDateInput.value : '';
-        const endDate = endDateInput ? endDateInput.value : '';
-        const dailyRate = parseFloat(dailyRateInput ? dailyRateInput.value : '') || 0;
-        const commissionRateVal = commissionRateInput ? commissionRateInput.value.trim() : '';
-        const commissionAmountVal = commissionAmountInput ? commissionAmountInput.value.trim() : '';
-        const commissionRate = parseFloat(commissionRateVal) || 0;
-        const commissionAmount = parseFloat(commissionAmountVal) || 0;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const dailyRate = parseFloat(dailyRateInput.value) || 0;
+        const commissionRate = parseFloat(commissionRateInput.value) || 0;
+        const commissionAmount = parseFloat(commissionAmountInput.value) || 0;
         const needsDriver = driverCheckbox ? driverCheckbox.checked : false;
         const needsCarSeat = carSeatCheckbox ? carSeatCheckbox.checked : false;
         
@@ -443,7 +435,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const start = new Date(startDate);
             const end = new Date(endDate);
             const timeDiff = end.getTime() - start.getTime();
-            const daysDiff = Math.max(1, Math.floor(timeDiff / (1000 * 3600 * 24)));
+            const daysDiff = Math.max(1, Math.floor(timeDiff / (1000 * 3600 * 24))); // Keep original working calculation
             
             if (daysDiff > 0) {
                 durationInput.value = daysDiff + ' dias';
@@ -451,72 +443,83 @@ document.addEventListener('DOMContentLoaded', function() {
                 const subtotal = daysDiff * dailyRate;
                 let commission = 0;
                 
-                // Commission: percentage takes priority if both have values
-                if (commissionRateVal !== '' && commissionRate > 0) {
+                // Calculate commission based on either percentage or fixed amount
+                if (commissionRate > 0) {
                     commission = subtotal * (commissionRate / 100);
-                } else if (commissionAmountVal !== '' && commissionAmount > 0) {
+                } else if (commissionAmount > 0) {
                     commission = commissionAmount;
                 }
                 
-                // Additional service fees (from system config)
-                const driverFee = needsDriver ? (daysDiff * SYS_DRIVER_RATE) : 0;
-                const carSeatFee = needsCarSeat ? (daysDiff * SYS_CAR_SEAT_RATE) : 0;
+                // Calculate additional service fees
+                const driverFee = needsDriver ? (daysDiff * 3000) : 0;
+                const carSeatFee = needsCarSeat ? (daysDiff * 500) : 0;
                 
-                const total = subtotal + commission + driverFee + carSeatFee;
+                const total = subtotal - commission + driverFee + carSeatFee; // Commission decreases, services increase
                 
-                // Breakdown display
-                let parts = [`Subtotal: ${subtotal.toFixed(2)}`];
-                if (commission > 0) {
-                    if (commissionRateVal !== '' && commissionRate > 0) {
-                        parts.push(`Comissão ${commissionRate}%: +${commission.toFixed(2)}`);
-                    } else {
-                        parts.push(`Comissão: +${commission.toFixed(2)}`);
-                    }
+                // Format total with breakdown
+                let breakdown = `${total.toFixed(2)} ECV`;
+                if (driverFee > 0 || carSeatFee > 0) {
+                    let extras = [];
+                    if (driverFee > 0) extras.push(`Motorista: ${driverFee.toFixed(2)}`);
+                    if (carSeatFee > 0) extras.push(`Assento: ${carSeatFee.toFixed(2)}`);
+                    breakdown += ` (+ ${extras.join(', ')})`;
                 }
-                if (driverFee > 0) parts.push(`Motorista: +${driverFee.toFixed(2)}`);
-                if (carSeatFee > 0) parts.push(`Assento: +${carSeatFee.toFixed(2)}`);
                 
-                totalInput.value = `${total.toFixed(2)} ECV`;
-                totalInput.title = parts.join(' | ');
+                totalInput.value = breakdown;
             } else {
                 durationInput.value = 'Datas inválidas';
                 totalInput.value = '';
-                totalInput.title = '';
             }
         } else {
             durationInput.value = '';
             totalInput.value = '';
-            totalInput.title = '';
         }
     }
     
-    // Add event listeners for all inputs that affect the total
+    // Clear the other commission field when one is entered
+    function clearOtherCommissionField(keepField) {
+        if (keepField === 'percent') {
+            // Clear amount field when percentage is entered
+            commissionAmountInput.value = '';
+        } else if (keepField === 'amount') {
+            // Clear percentage field when amount is entered
+            commissionRateInput.value = '';
+        }
+        calculateTotals();
+    }
+    
+    // Add event listeners
     if (startDateInput) startDateInput.addEventListener('change', calculateTotals);
     if (endDateInput) endDateInput.addEventListener('change', calculateTotals);
-    if (dailyRateInput) {
-        dailyRateInput.addEventListener('change', calculateTotals);
-        dailyRateInput.addEventListener('input', calculateTotals);
-    }
+    if (dailyRateInput) dailyRateInput.addEventListener('change', calculateTotals);
     if (driverCheckbox) driverCheckbox.addEventListener('change', calculateTotals);
     if (carSeatCheckbox) carSeatCheckbox.addEventListener('change', calculateTotals);
     
-    // Commission percentage field
+    // Commission percentage field - clear amount field when typing
     if (commissionRateInput) {
-        commissionRateInput.addEventListener('input', function() {
-            if (this.value.trim() !== '') {
-                commissionAmountInput.value = '';
+        commissionRateInput.addEventListener('input', () => {
+            if (commissionRateInput.value.trim() !== '') {
+                clearOtherCommissionField('percent');
             }
-            calculateTotals();
+        });
+        commissionRateInput.addEventListener('focus', () => {
+            if (commissionRateInput.value.trim() !== '') {
+                clearOtherCommissionField('percent');
+            }
         });
     }
     
-    // Commission amount field
+    // Commission amount field - clear percentage field when typing
     if (commissionAmountInput) {
-        commissionAmountInput.addEventListener('input', function() {
-            if (this.value.trim() !== '') {
-                commissionRateInput.value = '';
+        commissionAmountInput.addEventListener('input', () => {
+            if (commissionAmountInput.value.trim() !== '') {
+                clearOtherCommissionField('amount');
             }
-            calculateTotals();
+        });
+        commissionAmountInput.addEventListener('focus', () => {
+            if (commissionAmountInput.value.trim() !== '') {
+                clearOtherCommissionField('amount');
+            }
         });
     }
     
@@ -544,44 +547,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Set default start date to today and enforce min dates
-    const today = new Date().toISOString().split('T')[0];
-    if (startDateInput) {
-        startDateInput.setAttribute('min', today);
-        if (!startDateInput.value) {
-            startDateInput.value = today;
-        }
-    }
-    if (endDateInput) {
-        endDateInput.setAttribute('min', today);
-    }
-    
-    // Validate dates on change
-    if (startDateInput) {
-        startDateInput.addEventListener('change', function() {
-            if (this.value < today) {
-                this.value = today;
-                alert('A data de início não pode ser inferior à data de hoje.');
-            }
-            // End date must be after start date
-            if (endDateInput) {
-                endDateInput.setAttribute('min', this.value || today);
-                if (endDateInput.value && endDateInput.value <= this.value) {
-                    endDateInput.value = '';
-                }
-            }
-        });
-    }
-    if (endDateInput) {
-        endDateInput.addEventListener('change', function() {
-            if (this.value < today) {
-                this.value = '';
-                alert('A data de fim deve ser superior à data de hoje.');
-            } else if (startDateInput && startDateInput.value && this.value <= startDateInput.value) {
-                this.value = '';
-                alert('A data de fim deve ser superior à data de início.');
-            }
-        });
+    // Set default start date to today
+    if (startDateInput && !startDateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        startDateInput.value = today;
     }
     
     // Initial calculation if values are present
