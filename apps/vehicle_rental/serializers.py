@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import (
     Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory,
-    MaintenanceRecord, RentalEvaluation, VehiclePhoto, DeliveryLocation, SystemConfiguration
+    MaintenanceRecord, RentalEvaluation, VehiclePhoto, DeliveryLocation, SystemConfiguration,
+    CustomerNotification
 )
 
 
@@ -570,13 +571,19 @@ class CustomerRentalSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     evaluation = serializers.SerializerMethodField()
     days_duration = serializers.SerializerMethodField()
+    pickup_location_info = serializers.SerializerMethodField()
+    return_location_info = serializers.SerializerMethodField()
+    payment_details = serializers.SerializerMethodField()
+    service_fees = serializers.SerializerMethodField()
     
     class Meta:
         model = Rental
         fields = [
             'id', 'vehicle_info', 'start_date', 'end_date', 'days_duration',
-            'currency', 'total_amount', 'driver', 'car_seat', 'status', 'status_display',
-            'notes', 'evaluation', 'created_at'
+            'currency', 'daily_rate', 'subtotal', 'total_amount',
+            'pickup_location_info', 'return_location_info',
+            'driver', 'car_seat', 'payment_details', 'service_fees',
+            'status', 'status_display', 'notes', 'evaluation', 'created_at'
         ]
         read_only_fields = ['id', 'total_amount', 'created_at']
     
@@ -612,6 +619,43 @@ class CustomerRentalSerializer(serializers.ModelSerializer):
         if obj.start_date and obj.end_date:
             return (obj.end_date - obj.start_date).days
         return None
+    
+    def get_pickup_location_info(self, obj):
+        """Get pickup location details"""
+        if obj.pickup_location:
+            return DeliveryLocationSerializer(obj.pickup_location).data
+        return None
+    
+    def get_return_location_info(self, obj):
+        """Get return location details"""
+        if obj.return_location:
+            return DeliveryLocationSerializer(obj.return_location).data
+        return None
+    
+    def get_payment_details(self, obj):
+        """Get detailed payment breakdown"""
+        return {
+            'driver_requested': obj.driver,
+            'driver_fee_per_day': float(obj.driver_fee / obj.number_of_days) if obj.driver and obj.number_of_days > 0 else 0,
+            'driver_fee_total': float(obj.driver_fee),
+            'car_seat_requested': obj.car_seat,
+            'car_seat_fee_per_day': float(obj.car_seat_fee / obj.number_of_days) if obj.car_seat and obj.number_of_days > 0 else 0,
+            'car_seat_fee_total': float(obj.car_seat_fee),
+            'subtotal': float(obj.subtotal),
+            'total_services_fees': float(obj.driver_fee + obj.car_seat_fee),
+            'total_amount': float(obj.total_amount)
+        }
+    
+    def get_service_fees(self, obj):
+        """Get all service fees and charges"""
+        return {
+            'insurance_fee': float(obj.insurance_fee) if obj.insurance_fee else 0,
+            'security_deposit': float(obj.security_deposit) if obj.security_deposit else 0,
+            'commission_percent': float(obj.commission_percent) if obj.commission_percent else 0,
+            'commission_amount': float(obj.commission_amount) if obj.commission_amount else 0,
+            'late_return_fee': float(obj.late_return_fee) if obj.late_return_fee else 0,
+            'damage_fee': float(obj.damage_fee) if obj.damage_fee else 0
+        }
 
     def get_primary_photo(self, obj):
         """Get the primary photo if exists"""
@@ -734,6 +778,31 @@ class ChangePasswordSerializer(serializers.Serializer):
         # Store customer in validated_data for use in the view
         data['customer'] = customer
         return data
+
+
+class CustomerNotificationSerializer(serializers.ModelSerializer):
+    """Serializer for customer notifications"""
+    customer_name = serializers.CharField(source='customer.full_name', read_only=True)
+    customer_email = serializers.CharField(source='customer.email', read_only=True)
+    rental_id = serializers.IntegerField(source='rental.id', read_only=True, allow_null=True)
+    notification_type_display = serializers.CharField(source='get_notification_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    class Meta:
+        model = CustomerNotification
+        fields = [
+            'id', 'customer', 'customer_name', 'customer_email',
+            'rental', 'rental_id', 'notification_type', 'notification_type_display',
+            'recipient_email', 'subject', 'content', 'html_content',
+            'status', 'status_display', 'error_message', 'attempt_count',
+            'created_at', 'sent_at', 'created_by'
+        ]
+        read_only_fields = [
+            'id', 'customer_name', 'customer_email', 'rental_id',
+            'notification_type_display', 'status_display', 'created_at',
+            'sent_at', 'created_by'
+        ]
+
 
 
 class SystemConfigurationSerializer(serializers.ModelSerializer):
