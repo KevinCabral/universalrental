@@ -778,7 +778,7 @@ def _send_rental_booking_email(rental, request):
         'company_email': 'universal.r.car@gmail.com',
         'company_phone1': '(+238) 978 13 04',
         'company_phone2': '(+238) 347 6581',
-    } 
+    }
 
     html_body = render_to_string('vehicle_rental/email/rental_booking.html', context)
     # Plain-text fallback
@@ -916,6 +916,66 @@ def _send_rental_return_email(rental, request):
         logger.error(f'Rental #{rental.id}: failed to send return email - {error_msg}')
 
 
+def _send_rental_cancellation_email(rental):
+    """Send cancellation notification email to customer."""
+    customer = rental.customer
+    if not customer.email:
+        logger.warning('Rental #%s: customer has no email, skipping cancellation notification.', rental.id)
+        return
+
+    subject = f'Cancelamento de Reserva #{rental.id} - Universal Rent a Car'
+
+    context = {
+        'rental': rental,
+        'customer': customer,
+        'vehicle': rental.vehicle,
+        'company_name': 'Universal Rent a Car',
+        'company_email': 'universal.r.car@gmail.com',
+        'company_phone1': '(+238) 978 13 04',
+        'company_phone2': '(+238) 347 6581',
+    }
+
+    # Try to render HTML template if it exists, otherwise use plain text
+    try:
+        html_body = render_to_string('vehicle_rental/email/rental_cancellation.html', context)
+    except Exception:
+        html_body = None
+
+    # Plain-text fallback
+    text_body = (
+        f'Olá {customer.full_name},\n\n'
+        f'A sua reserva #{rental.id} foi cancelada.\n\n'
+        f'Detalhes da Reserva Cancelada:\n'
+        f'Veículo: {rental.vehicle.brand.name} {rental.vehicle.model} ({rental.vehicle.year})\n'
+        f'Matrícula: {rental.vehicle.registration_number}\n'
+        f'Período: {rental.start_date:%d/%m/%Y %H:%M} - {rental.end_date:%d/%m/%Y %H:%M}\n'
+        f'Valor Total: {rental.total_amount} {rental.currency}\n\n'
+        f'Se tiver alguma questão ou precisar de assistência, não hesite em contactar-nos.\n\n'
+        f'Atenciosamente,\n'
+        f'Universal Rent a Car\n'
+        f'Tel: (+238) 978 13 04 / (+238) 347 6581\n'
+        f'Email: universal.r.car@gmail.com'
+    )
+
+    # Create notification record
+    notification = CustomerNotification.objects.create(
+        customer=customer,
+        rental=rental,
+        notification_type='rental_cancellation',
+        recipient_email=customer.email,
+        subject=subject,
+        content=text_body,
+        html_content=html_body if html_body else text_body,
+        status='pending'
+    )
+    
+    # Attempt to send
+    success, error_msg = notification.send()
+    
+    if not success:
+        logger.error(f'Rental #{rental.id}: failed to send cancellation email - {error_msg}')
+
+
 def _send_welcome_email(customer, request=None):
     """Send welcome email to newly registered customer."""
     if not customer.email:
@@ -1009,6 +1069,12 @@ def rental_cancel(request, pk):
             rental.save()
             
             # Vehicle status will be updated automatically by signals
+            
+            # Send cancellation notification email
+            try:
+                _send_rental_cancellation_email(rental)
+            except Exception as e:
+                logger.error(f"Failed to send cancellation email for rental {rental.id}: {str(e)}")
             
             messages.success(request, f'Aluguer #{rental.id} foi cancelado com sucesso!')
         else:
@@ -2551,6 +2617,12 @@ class RentalViewSet(viewsets.ModelViewSet):
             rental.status = 'cancelled'
             rental.save()
             
+            # Send cancellation notification email
+            try:
+                _send_rental_cancellation_email(rental)
+            except Exception as e:
+                logger.error(f"Failed to send cancellation email for rental {rental.id}: {str(e)}")
+            
             return Response({
                 'status': 'success',
                 'message': f'Rental #{rental.id} cancelled successfully',
@@ -3344,6 +3416,12 @@ class CustomerRentalViewSet(viewsets.ModelViewSet):
         rental.status = 'cancelled'
         rental.save()
         
+        # Send cancellation notification email
+        try:
+            _send_rental_cancellation_email(rental)
+        except Exception as e:
+            logger.error(f"Failed to send cancellation email for rental {rental.id}: {str(e)}")
+        
         serializer = self.get_serializer(rental)
         return Response({
             'message': 'Rental cancelled successfully',
@@ -3821,7 +3899,7 @@ def reset_password(request):
         return Response({
             'error': 'Password confirmation is required'
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
     # Check if passwords match
     if new_password != confirm_password:
         return Response({
@@ -3871,6 +3949,135 @@ def reset_password(request):
         'message': 'Password reset successfully',
         'email': email
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def get_rental_by_number_and_email(request):
+    """
+    Get rental details by rental number and customer email
+    
+    POST /vehicle-rental/api/customer/rental-details/
+    Body: {
+        "rental_number": 123,
+        "email": "customer@example.com"
+    }
+    
+    Returns complete rental details if the email matches the customer associated with the rental
+    Includes: rental info, customer info, vehicle info, expenses, evaluation, and photos
+    """
+    rental_number = request.data.get('rental_number')
+    email = request.data.get('email')
+    
+    # Validate required fields
+    if not rental_number:
+        return Response({
+            'error': 'Número do aluguer é obrigatório'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not email:
+        return Response({
+            'error': 'Email é obrigatório'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Try to find the rental
+    try:
+        rental = Rental.objects.select_related(
+            'vehicle', 
+            'vehicle__brand', 
+            'customer',
+            'pickup_location',
+            'return_location',
+            'created_by'
+        ).prefetch_related(
+            'expenses',
+            'expenses__category',
+            'photos'
+        ).get(id=rental_number)
+    except Rental.DoesNotExist:
+        return Response({
+            'error': 'Aluguer não encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Verify that the email matches the customer's email
+    if rental.customer.email.lower() != email.lower():
+        return Response({
+            'error': 'Email não corresponde ao cliente deste aluguer'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Fix empty total_amount if needed
+    if not rental.total_amount and rental.daily_rate and rental.number_of_days:
+        rental.subtotal = rental.daily_rate * rental.number_of_days
+        rental.commission_amount = (rental.subtotal * rental.commission_percent) / 100 if rental.commission_percent else 0
+        rental.total_amount = (
+            rental.subtotal - 
+            rental.commission_amount + 
+            (rental.insurance_fee or 0) + 
+            (rental.late_return_fee or 0) + 
+            (rental.damage_fee or 0)
+        )
+        rental.save()
+    
+    # Serialize rental data using RentalSerializer (same as RentalViewSet)
+    from .serializers import RentalSerializer, ExpenseSerializer, CustomerSerializer
+    rental_data = RentalSerializer(rental, context={'request': request}).data
+    
+    # Get related expenses
+    expenses = rental.expenses.select_related('category').order_by('-date')
+    expenses_data = ExpenseSerializer(expenses, many=True, context={'request': request}).data
+    
+    # Get evaluation (if exists)
+    evaluation = None
+    try:
+        if hasattr(rental, 'evaluation'):
+            eval_obj = rental.evaluation
+            evaluation = {
+                'id': eval_obj.id,
+                'overall_rating': eval_obj.overall_rating,
+                'vehicle_cleanliness': eval_obj.vehicle_cleanliness,
+                'vehicle_condition': eval_obj.vehicle_condition,
+                'service_quality': eval_obj.service_quality,
+                'value_for_money': eval_obj.value_for_money,
+                'comments': eval_obj.comments,
+                'created_at': eval_obj.created_at,
+            }
+    except RentalEvaluation.DoesNotExist:
+        evaluation = None
+    
+    # Get photos
+    start_photos = rental.photos.filter(photo_type__startswith='start_')
+    return_photos = rental.photos.filter(photo_type__startswith='return_')
+    
+    start_photos_data = [{
+        'id': photo.id,
+        'photo_type': photo.photo_type,
+        'image': request.build_absolute_uri(photo.image.url) if photo.image else None,
+        'uploaded_at': photo.uploaded_at
+    } for photo in start_photos]
+    
+    return_photos_data = [{
+        'id': photo.id,
+        'photo_type': photo.photo_type,
+        'image': request.build_absolute_uri(photo.image.url) if photo.image else None,
+        'uploaded_at': photo.uploaded_at
+    } for photo in return_photos]
+    
+    # Customer data
+    customer_data = CustomerSerializer(rental.customer, context={'request': request}).data
+    
+    # Build response in the same structure as rental_detail context
+    response_data = {
+        **rental_data,  # Spread all rental fields at root level
+        'customer': customer_data,
+        'expenses': expenses_data,
+        'evaluation': evaluation,
+        'start_photos_count': len(start_photos_data),
+        'return_photos_count': len(return_photos_data),
+        'start_photos': start_photos_data,
+        'return_photos': return_photos_data,
+    }
+    
+    return Response(response_data, status=status.HTTP_200_OK)
 
 
 class SystemConfigurationAPIView(APIView):
