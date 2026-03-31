@@ -3428,7 +3428,6 @@ class CustomerRentalViewSet(viewsets.ModelViewSet):
             'rental': serializer.data
         })
 
-
 class CustomerRentalEvaluationViewSet(viewsets.ModelViewSet):
     """ViewSet for customers to create and view rental evaluations"""
     serializer_class = RentalEvaluationSerializer
