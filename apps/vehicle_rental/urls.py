@@ -56,7 +56,7 @@ urlpatterns = [
     path('maintenance/create/', views.maintenance_create, name='maintenance_create'),
     path('maintenance/<int:pk>/', views.maintenance_detail, name='maintenance_detail'),
     path('maintenance/<int:pk>/edit/', views.maintenance_edit, name='maintenance_edit'),
-    
+
     # Parameterization – Brands
     path('brands/', views.brand_list, name='brand_list'),
     path('brands/create/', views.brand_create, name='brand_create'),
@@ -90,12 +90,13 @@ urlpatterns = [
     
     # API endpoints (Admin/Backoffice)
     path('api/', include(router.urls)),
-    
+
     # Customer-facing API endpoints
     path('api/customer/login/', views.customer_login, name='customer_login'),
     path('api/customer/change-password/', views.change_password, name='customer_change_password'),
     path('api/customer/request-password-reset/', views.request_password_reset, name='request_password_reset'),
     path('api/customer/reset-password/', views.reset_password, name='reset_password'),
+    path('api/customer/rental-details/', views.get_rental_by_number_and_email, name='rental_details_by_email'),
     path('api/customer/<int:customer_id>/notifications/', views.CustomerNotificationViewSet.as_view({'get': 'list'}), name='customer-notifications'),
     path('api/customer/', include(customer_router.urls)),
     

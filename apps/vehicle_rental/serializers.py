@@ -619,7 +619,7 @@ class CustomerRentalSerializer(serializers.ModelSerializer):
         if obj.start_date and obj.end_date:
             return (obj.end_date - obj.start_date).days
         return None
-    
+
     def get_pickup_location_info(self, obj):
         """Get pickup location details"""
         if obj.pickup_location:
