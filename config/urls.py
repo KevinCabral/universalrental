@@ -21,6 +21,7 @@ from rest_framework.authtoken.views import obtain_auth_token # <-- NEW
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from apps.vehicle_rental.staff_auth_views import StaffLoginView
 
 # Swagger/OpenAPI configuration
 schema_view = get_schema_view(
@@ -37,6 +38,9 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Login customizado - apenas usuários staff podem fazer login
+    path('accounts/login/', StaffLoginView.as_view(), name='login'),
+    
     path('', include('apps.pages.urls')),
     path("", include("apps.dyn_dt.urls")),
     path("", include("apps.dyn_api.urls")),

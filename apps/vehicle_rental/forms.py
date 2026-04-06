@@ -547,6 +547,16 @@ class MaintenanceRecordForm(forms.ModelForm):
         vehicle_id = kwargs.get('initial', {}).get('vehicle')
         super().__init__(*args, **kwargs)
         
+        # Set default values for cost fields to make them optional
+        self.fields['labor_cost'].initial = 0
+        self.fields['parts_cost'].initial = 0
+        self.fields['other_costs'].initial = 0
+        
+        # Make cost fields not required (they have default value of 0)
+        self.fields['labor_cost'].required = False
+        self.fields['parts_cost'].required = False
+        self.fields['other_costs'].required = False
+        
         # If vehicle_id is provided, set it as initial value
         if vehicle_id:
             try:
