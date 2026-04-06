@@ -425,6 +425,24 @@
 </style>
 
 <script>
+// Function to get CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
 $(document).ready(function() {
     // Initialize feather icons
     feather.replace();
@@ -447,7 +465,7 @@ function startMaintenance(maintenanceId) {
             url: '/vehicle-rental/api/maintenance/' + maintenanceId + '/start/',
             method: 'POST',
             headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                'X-CSRFToken': csrftoken
             },
             success: function(response) {
                 location.reload();
@@ -525,7 +543,7 @@ function completeMaintenance(maintenanceId) {
             url: '/vehicle-rental/api/maintenance/' + maintenanceId + '/complete/',
             method: 'POST',
             headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                'X-CSRFToken': csrftoken
             },
             data: $(this).serialize(),
             success: function(response) {

@@ -1759,8 +1759,12 @@ def maintenance_create(request):
         if form.is_valid():
             maintenance = form.save(commit=False)
             maintenance.created_by = request.user
+            # Ensure cost fields are not None
+            maintenance.labor_cost = maintenance.labor_cost or 0
+            maintenance.parts_cost = maintenance.parts_cost or 0
+            maintenance.other_costs = maintenance.other_costs or 0
             # Calculate total cost
-            maintenance.total_cost = (maintenance.labor_cost or 0) + (maintenance.parts_cost or 0) + (maintenance.other_costs or 0)
+            maintenance.total_cost = maintenance.labor_cost + maintenance.parts_cost + maintenance.other_costs
             maintenance.save()
             messages.success(request, f'Maintenance record for {maintenance.vehicle.registration_number} created successfully!')
             return redirect('vehicle_rental:maintenance_detail', pk=maintenance.pk)
@@ -1786,8 +1790,12 @@ def maintenance_edit(request, pk):
         form = MaintenanceRecordForm(request.POST, instance=maintenance)
         if form.is_valid():
             maintenance = form.save(commit=False)
+            # Ensure cost fields are not None
+            maintenance.labor_cost = maintenance.labor_cost or 0
+            maintenance.parts_cost = maintenance.parts_cost or 0
+            maintenance.other_costs = maintenance.other_costs or 0
             # Calculate total cost
-            maintenance.total_cost = (maintenance.labor_cost or 0) + (maintenance.parts_cost or 0) + (maintenance.other_costs or 0)
+            maintenance.total_cost = maintenance.labor_cost + maintenance.parts_cost + maintenance.other_costs
             maintenance.save()
             messages.success(request, f'Maintenance record for {maintenance.vehicle.registration_number} updated successfully!')
             return redirect('vehicle_rental:maintenance_detail', pk=maintenance.pk)
@@ -2773,6 +2781,130 @@ class ExpenseViewSet(viewsets.ModelViewSet):
 class MaintenanceRecordViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRecord.objects.select_related('vehicle')
     serializer_class = MaintenanceRecordSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def start(self, request, pk=None):
+        """Start a maintenance record - change status to in_progress"""
+        maintenance = self.get_object()
+        
+        if maintenance.status == 'in_progress':
+            return Response(
+                {'error': 'Manutenção já está em progresso'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if maintenance.status == 'completed':
+            return Response(
+                {'error': 'Manutenção já foi concluída'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if maintenance.status == 'cancelled':
+            return Response(
+                {'error': 'Manutenção foi cancelada'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update status to in_progress
+        maintenance.status = 'in_progress'
+        maintenance.save()
+        
+        # Update vehicle status to maintenance if not already
+        if maintenance.vehicle.status != 'maintenance':
+            maintenance.vehicle.status = 'maintenance'
+            maintenance.vehicle.save()
+        
+        serializer = self.get_serializer(maintenance)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def complete(self, request, pk=None):
+        """Complete a maintenance record"""
+        maintenance = self.get_object()
+        
+        if maintenance.status == 'completed':
+            return Response(
+                {'error': 'Manutenção já foi concluída'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if maintenance.status == 'cancelled':
+            return Response(
+                {'error': 'Manutenção foi cancelada'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update maintenance record
+        maintenance.status = 'completed'
+        
+        # Update date_completed if provided
+        completed_date = request.data.get('completed_date')
+        if completed_date:
+            from datetime import datetime
+            try:
+                # Parse ISO format datetime
+                maintenance.date_completed = datetime.fromisoformat(completed_date.replace('Z', '+00:00')).date()
+            except (ValueError, AttributeError):
+                maintenance.date_completed = timezone.now().date()
+        else:
+            maintenance.date_completed = timezone.now().date()
+        
+        # Update costs if provided
+        labor_cost = request.data.get('labor_cost')
+        if labor_cost:
+            maintenance.labor_cost = Decimal(labor_cost)
+        
+        parts_cost = request.data.get('parts_cost')
+        if parts_cost:
+            maintenance.parts_cost = Decimal(parts_cost)
+        
+        other_cost = request.data.get('other_cost')
+        if other_cost:
+            maintenance.other_costs = Decimal(other_cost)
+        
+        # Recalculate total cost
+        maintenance.labor_cost = maintenance.labor_cost or 0
+        maintenance.parts_cost = maintenance.parts_cost or 0
+        maintenance.other_costs = maintenance.other_costs or 0
+        maintenance.total_cost = maintenance.labor_cost + maintenance.parts_cost + maintenance.other_costs
+        
+        # Update warranty if provided
+        warranty_period_months = request.data.get('warranty_period_months')
+        if warranty_period_months:
+            # Calculate warranty end date (approximate: 30 days per month)
+            days = int(warranty_period_months) * 30
+            maintenance.warranty_until = maintenance.date_completed + timedelta(days=days)
+        
+        # Update next service date if provided
+        next_service_date = request.data.get('next_service_date')
+        if next_service_date:
+            maintenance.next_service_date = next_service_date
+        
+        maintenance.save()
+        
+        # Check if vehicle should return to available status
+        # Only if there are no other active maintenance records
+        active_maintenance = MaintenanceRecord.objects.filter(
+            vehicle=maintenance.vehicle,
+            status__in=['scheduled', 'in_progress']
+        ).exclude(pk=maintenance.pk).exists()
+        
+        if not active_maintenance:
+            # Check if vehicle is in an active rental
+            from datetime import date
+            active_rental = Rental.objects.filter(
+                vehicle=maintenance.vehicle,
+                status='active',
+                end_date__gte=date.today()
+            ).exists()
+            
+            if not active_rental:
+                maintenance.vehicle.status = 'available'
+                maintenance.vehicle.save()
+        
+        serializer = self.get_serializer(maintenance)
+        return Response(serializer.data)
 
 
 class RentalEvaluationViewSet(viewsets.ModelViewSet):
