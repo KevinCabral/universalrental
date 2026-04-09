@@ -12,6 +12,23 @@ from django.core import serializers
 
 from .models import *
 
+
+# Helper function to display form errors as toast messages
+def add_form_errors_to_messages(request, form):
+    """Convert form validation errors to Django messages for toast display"""
+    # Add non-field errors (general form errors)
+    for error in form.non_field_errors():
+        messages.error(request, error)
+    
+    # Add field-specific errors
+    for field_name, errors in form.errors.items():
+        if field_name != '__all__':  # Skip non-field errors (already handled)
+            # Get the field label in Portuguese if available, otherwise use field name
+            field_label = form.fields[field_name].label if field_name in form.fields else field_name
+            for error in errors:
+                messages.error(request, f"{field_label}: {error}")
+
+
 @login_required
 def index(request):
   from apps.vehicle_rental.models import Vehicle, Customer, Rental, Expense, MaintenanceRecord
@@ -58,8 +75,14 @@ def index(request):
       date__lt=next_month_start.date(),
   ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
-  # Monthly profit
-  monthly_profit = monthly_revenue - monthly_expenses
+  # Monthly maintenance costs
+  monthly_maintenance_costs = MaintenanceRecord.objects.filter(
+      date_scheduled__gte=current_month_start.date(),
+      date_scheduled__lt=next_month_start.date(),
+  ).aggregate(total=Sum('total_cost'))['total'] or Decimal('0')
+
+  # Monthly profit (revenue - expenses - maintenance)
+  monthly_profit = monthly_revenue - monthly_expenses - monthly_maintenance_costs
 
   # Rentals this month
   rentals_this_month = Rental.objects.filter(
@@ -160,6 +183,7 @@ def index(request):
     'monthly_revenue': monthly_revenue,
     'total_revenue': total_revenue,
     'monthly_expenses': monthly_expenses,
+    'monthly_maintenance_costs': monthly_maintenance_costs,
     'monthly_profit': monthly_profit,
     'rentals_this_month': rentals_this_month,
     'driver_requests_count': driver_requests_count,
@@ -243,7 +267,7 @@ def change_password(request):
       messages.success(request, 'Senha alterada com sucesso!')
       return redirect('profile')
     else:
-      messages.error(request, 'Por favor, corrija os erros abaixo.')
+      add_form_errors_to_messages(request, form)
   else:
     form = PasswordChangeForm(request.user)
   

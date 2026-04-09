@@ -1,0 +1,87 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Eliminar Utilizador | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Eliminar Utilizador</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:user_list' %}">Utilizadores</a></li>
+          <li class="breadcrumb-item active">Eliminar</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Confirmation -->
+    <div class="row">
+      <div class="col-md-6 offset-md-3">
+        <div class="card border-danger">
+          <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              Confirmar Eliminação
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-circle me-2"></i>
+              <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+            </div>
+            
+            <p class="mb-3">Tem certeza de que deseja eliminar o seguinte utilizador?</p>
+            
+            <div class="card bg-light">
+              <div class="card-body">
+                <dl class="row mb-0">
+                  <dt class="col-sm-4">Username:</dt>
+                  <dd class="col-sm-8">{{ user_obj.username }}</dd>
+                  
+                  <dt class="col-sm-4">Nome:</dt>
+                  <dd class="col-sm-8">{{ user_obj.get_full_name|default:"-" }}</dd>
+                  
+                  <dt class="col-sm-4">Email:</dt>
+                  <dd class="col-sm-8">{{ user_obj.email|default:"-" }}</dd>
+                  
+                  <dt class="col-sm-4">Staff:</dt>
+                  <dd class="col-sm-8">
+                    {% if user_obj.is_staff %}
+                    <span class="badge bg-success">Sim</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Não</span>
+                    {% endif %}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+
+            <form method="post" class="mt-4">
+              {% csrf_token %}
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'vehicle_rental:user_detail' user_obj.pk %}" class="btn btn-secondary">
+                  <i class="fas fa-times me-1"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-trash me-1"></i> Sim, Eliminar Utilizador
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}

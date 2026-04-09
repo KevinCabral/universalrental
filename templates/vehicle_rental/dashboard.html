@@ -135,21 +135,66 @@
   </div>
 </div>
 
-<!-- Revenue Card with improved design -->
+<!-- Financial Summary Cards -->
 <div class="row mb-4">
-  <div class="col-md-12">
-    <div class="card border-0 shadow-sm bg-gradient-success text-white">
-      <div class="card-body p-4">
-        <div class="row align-items-center">
-          <div class="col-8">
-            <h6 class="text-white-50 mb-2">Monthly Revenue</h6>
-            <h2 class="text-white mb-1">{{ monthly_revenue|floatformat:0 }} ECV</h2>
-            <p class="text-white-50 mb-0">Revenue generated this month</p>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-success text-white">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="text-white-50 mb-1">Receita Mensal</h6>
+            <h4 class="text-white mb-0">{{ monthly_revenue|floatformat:0 }} ECV</h4>
           </div>
-          <div class="col-4 text-end">
-            <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-              <i data-feather="dollar-sign" class="text-white" style="width: 40px; height: 40px;"></i>
-            </div>
+          <div class="bg-white bg-opacity-20 rounded-circle p-2">
+            <i data-feather="trending-up" class="text-white" style="width: 24px; height: 24px;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-danger text-white">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="text-white-50 mb-1">Despesas Mensais</h6>
+            <h4 class="text-white mb-0">{{ monthly_expenses|floatformat:0 }} ECV</h4>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-circle p-2">
+            <i data-feather="dollar-sign" class="text-white" style="width: 24px; height: 24px;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-warning text-white">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="text-white-50 mb-1">Custos Manutenção</h6>
+            <h4 class="text-white mb-0">{{ monthly_maintenance_costs|floatformat:0 }} ECV</h4>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-circle p-2">
+            <i data-feather="tool" class="text-white" style="width: 24px; height: 24px;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-{% if monthly_profit >= 0 %}primary{% else %}dark{% endif %} text-white">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="text-white-50 mb-1">Lucro Líquido</h6>
+            <h4 class="text-white mb-0">{{ monthly_profit|floatformat:0 }} ECV</h4>
+          </div>
+          <div class="bg-white bg-opacity-20 rounded-circle p-2">
+            <i data-feather="{% if monthly_profit >= 0 %}trending-up{% else %}trending-down{% endif %}" class="text-white" style="width: 24px; height: 24px;"></i>
           </div>
         </div>
       </div>

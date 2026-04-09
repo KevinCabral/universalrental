@@ -1,0 +1,122 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Gerir Permissões | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Gerir Permissões</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:user_list' %}">Utilizadores</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:user_detail' user_obj.pk %}">{{ user_obj.username }}</a></li>
+          <li class="breadcrumb-item active">Permissões</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="row">
+      <div class="col-md-10 offset-md-1">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-key text-primary me-2"></i>
+              Gerir Permissões: {{ user_obj.username }}
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              Selecione as permissões específicas para este utilizador. As permissões dos grupos aos quais o utilizador pertence também se aplicam.
+            </div>
+
+            <form method="post" novalidate>
+              {% csrf_token %}
+              
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+              </div>
+              {% endif %}
+              
+              <div class="mb-3">
+                <label class="form-label fw-bold">
+                  {{ form.user_permissions.label }}
+                </label>
+                <div class="card bg-light">
+                  <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    <div class="row">
+                      {% for permission in form.user_permissions %}
+                      <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                          {{ permission.tag }}
+                          <label class="form-check-label" for="{{ permission.id_for_label }}">
+                            {{ permission.choice_label }}
+                          </label>
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+                {% if form.user_permissions.errors %}
+                <div class="text-danger small mt-2">{{ form.user_permissions.errors }}</div>
+                {% endif %}
+              </div>
+
+              <hr class="my-4">
+
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'vehicle_rental:user_detail' user_obj.pk %}" class="btn btn-secondary">
+                  <i class="fas fa-times me-1"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save me-1"></i> Guardar Permissões
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Current Groups -->
+        <div class="card mt-3">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-users-cog text-primary me-2"></i>
+              Grupos do Utilizador
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if user_obj.groups.all %}
+            <p class="text-muted mb-2">Este utilizador pertence aos seguintes grupos:</p>
+            <div>
+              {% for group in user_obj.groups.all %}
+              <span class="badge bg-info me-1 mb-1">{{ group.name }}</span>
+              {% endfor %}
+            </div>
+            <small class="text-muted d-block mt-2">
+              <i class="fas fa-info-circle me-1"></i>
+              As permissões dos grupos são aplicadas automaticamente.
+            </small>
+            {% else %}
+            <p class="text-muted mb-0">Nenhum grupo atribuído.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
