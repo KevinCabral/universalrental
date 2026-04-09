@@ -230,7 +230,7 @@
               <div class="row">
                 <div class="col-12">
                   <h6 class="mb-3 mt-4 text-success">
-                    <i class="fas fa-euro-sign me-2"></i>
+                    <i class="fas fa-money-bill-wave me-2"></i>
                     Detalhamento de Custos
                   </h6>
                 </div>
@@ -241,7 +241,7 @@
                   <div class="form-group mb-3">
                     <label for="{{ form.labor_cost.id_for_label }}" class="form-label fw-bold">
                       <i class="fas fa-user-cog me-1 text-muted"></i>
-                      Custo de Mão de Obra (€)
+                      Custo de Mão de Obra (CVE)
                     </label>
                     {{ form.labor_cost }}
                     {% if form.labor_cost.errors %}
@@ -253,7 +253,7 @@
                   <div class="form-group mb-3">
                     <label for="{{ form.parts_cost.id_for_label }}" class="form-label fw-bold">
                       <i class="fas fa-cogs me-1 text-muted"></i>
-                      Custo de Peças (€)
+                      Custo de Peças (CVE)
                     </label>
                     {{ form.parts_cost }}
                     {% if form.parts_cost.errors %}
@@ -265,7 +265,7 @@
                   <div class="form-group mb-3">
                     <label for="{{ form.other_costs.id_for_label }}" class="form-label fw-bold">
                       <i class="fas fa-receipt me-1 text-muted"></i>
-                      Outros Custos (€)
+                      Outros Custos (CVE)
                     </label>
                     {{ form.other_costs }}
                     {% if form.other_costs.errors %}
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
         totalRow.className = 'col-12 mt-3';
         totalRow.innerHTML = `
             <div class="alert alert-info" id="totalCostDisplay" style="display: none;">
-                <strong><i class="fas fa-calculator me-2"></i>Custo Total: €<span id="totalAmount">0.00</span></strong>
+                <strong><i class="fas fa-calculator me-2"></i>Custo Total: <span id="totalAmount">0.00</span> CVE</strong>
             </div>
         `;
         costSection.appendChild(totalRow);

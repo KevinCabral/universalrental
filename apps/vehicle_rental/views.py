@@ -2,6 +2,7 @@ import os
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
@@ -29,6 +30,7 @@ from .serializers import (
 )
 from .forms import VehicleForm, CustomerForm, RentalForm, ExpenseForm, MaintenanceRecordForm, RentalStartPhotosFormSet, RentalReturnPhotosFormSet
 from .forms import VehicleBrandForm, DeliveryLocationForm, ExpenseCategoryForm, SystemConfigurationForm
+from .forms import UserCreateForm, UserEditForm, UserPasswordChangeForm, UserPermissionsForm
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 import json
@@ -36,6 +38,22 @@ import calendar
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# Helper function to display form errors as toast messages
+def add_form_errors_to_messages(request, form):
+    """Convert form validation errors to Django messages for toast display"""
+    # Add non-field errors (general form errors)
+    for error in form.non_field_errors():
+        messages.error(request, error)
+    
+    # Add field-specific errors
+    for field_name, errors in form.errors.items():
+        if field_name != '__all__':  # Skip non-field errors (already handled)
+            # Get the field label in Portuguese if available, otherwise use field name
+            field_label = form.fields[field_name].label if field_name in form.fields else field_name
+            for error in errors:
+                messages.error(request, f"{field_label}: {error}")
 
 
 # Dashboard and Main Views
@@ -68,6 +86,21 @@ def dashboard(request):
         status__in=['confirmed', 'active', 'completed']
     ).aggregate(total=Sum('total_amount'))['total'] or 0
     
+    # Monthly expenses
+    monthly_expenses = Expense.objects.filter(
+        date__gte=current_month,
+        date__lt=next_month
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Monthly maintenance costs
+    monthly_maintenance_costs = MaintenanceRecord.objects.filter(
+        date_scheduled__gte=current_month,
+        date_scheduled__lt=next_month
+    ).aggregate(total=Sum('total_cost'))['total'] or 0
+    
+    # Net profit (revenue - expenses - maintenance)
+    monthly_profit = monthly_revenue - monthly_expenses - monthly_maintenance_costs
+    
     context = {
         'total_vehicles': total_vehicles,
         'available_vehicles': available_vehicles,
@@ -76,6 +109,9 @@ def dashboard(request):
         'recent_rentals': recent_rentals,
         'upcoming_maintenance': upcoming_maintenance,
         'monthly_revenue': monthly_revenue,
+        'monthly_expenses': monthly_expenses,
+        'monthly_maintenance_costs': monthly_maintenance_costs,
+        'monthly_profit': monthly_profit,
     }
     
     return render(request, 'vehicle_rental/dashboard.html', context)
@@ -312,7 +348,7 @@ def vehicle_create(request):
             messages.success(request, success_msg)
             return redirect('vehicle_rental:vehicle_detail', pk=vehicle.pk)
         else:
-            messages.error(request, 'Please correct the errors below.')
+            add_form_errors_to_messages(request, form)
     else:
         form = VehicleForm()
     
@@ -373,7 +409,7 @@ def vehicle_edit(request, pk):
             messages.success(request, success_msg)
             return redirect('vehicle_rental:vehicle_detail', pk=vehicle.pk)
         else:
-            messages.error(request, 'Please correct the errors below.')
+            add_form_errors_to_messages(request, form)
     else:
         form = VehicleForm(instance=vehicle)
     
@@ -509,6 +545,8 @@ def customer_create(request):
             
             messages.success(request, f'Customer "{customer.full_name}" has been created successfully!')
             return redirect('vehicle_rental:customer_detail', pk=customer.pk)
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = CustomerForm()
     
@@ -533,6 +571,8 @@ def customer_edit(request, pk):
             customer = form.save()
             messages.success(request, f'Customer "{customer.full_name}" has been updated successfully!')
             return redirect('vehicle_rental:customer_detail', pk=customer.pk)
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = CustomerForm(instance=customer)
     
@@ -712,11 +752,7 @@ def rental_create(request):
             messages.success(request, 'Rental created successfully!')
             return redirect('vehicle_rental:rental_detail', pk=rental.pk)
         else:
-            # Add error messages when form is invalid
-            messages.error(request, 'Please correct the errors below.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
+            add_form_errors_to_messages(request, form)
     else:
         form = RentalForm(initial=initial_data)
     
@@ -742,6 +778,8 @@ def rental_edit(request, pk):
             rental = form.save()
             messages.success(request, f'Rental #{rental.id} has been updated successfully!')
             return redirect('vehicle_rental:rental_detail', pk=rental.pk)
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = RentalForm(instance=rental)
         # For editing, we need to include all vehicles (including the currently rented one)
@@ -1619,6 +1657,8 @@ def expense_create(request):
             expense = form.save()
             messages.success(request, f'Expense "{expense.description[:50]}" created successfully!')
             return redirect('vehicle_rental:expense_detail', pk=expense.pk)
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = ExpenseForm(initial=initial_data)
     
@@ -1640,6 +1680,8 @@ def expense_edit(request, pk):
             expense = form.save()
             messages.success(request, f'Expense "{expense.description[:50]}" updated successfully!')
             return redirect('vehicle_rental:expense_detail', pk=expense.pk)
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = ExpenseForm(instance=expense)
     
@@ -1768,13 +1810,15 @@ def maintenance_create(request):
             maintenance.save()
             messages.success(request, f'Maintenance record for {maintenance.vehicle.registration_number} created successfully!')
             return redirect('vehicle_rental:maintenance_detail', pk=maintenance.pk)
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = MaintenanceRecordForm(initial=initial_data)
     
     context = {
         'form': form,
-        'title': 'Create Maintenance Record',
-        'submit_text': 'Create Record'
+        'title': 'Criar Registro de Manutenção',
+        'submit_text': 'Criar Registro'
     }
     
     return render(request, 'vehicle_rental/maintenance_form.html', context)
@@ -1799,6 +1843,8 @@ def maintenance_edit(request, pk):
             maintenance.save()
             messages.success(request, f'Maintenance record for {maintenance.vehicle.registration_number} updated successfully!')
             return redirect('vehicle_rental:maintenance_detail', pk=maintenance.pk)
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = MaintenanceRecordForm(instance=maintenance)
     
@@ -2468,6 +2514,10 @@ class VehicleBrandViewSet(viewsets.ModelViewSet):
     """ViewSet for managing vehicle brands"""
     queryset = VehicleBrand.objects.all().order_by('name')
     serializer_class = VehicleBrandSerializer
+    
+    def get_queryset(self):
+        """Return only brands that have associated vehicles"""
+        return VehicleBrand.objects.filter(vehicles__isnull=False).distinct().order_by('name')
 
 
 class DeliveryLocationViewSet(viewsets.ModelViewSet):
@@ -4270,6 +4320,8 @@ def brand_create(request):
             form.save()
             messages.success(request, 'Marca criada com sucesso.')
             return redirect('vehicle_rental:brand_list')
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = VehicleBrandForm()
     return render(request, 'vehicle_rental/param/brand_form.html', {'form': form, 'segment': 'param_brands', 'title': 'Nova Marca'})
@@ -4283,6 +4335,8 @@ def brand_edit(request, pk):
             form.save()
             messages.success(request, 'Marca atualizada com sucesso.')
             return redirect('vehicle_rental:brand_list')
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = VehicleBrandForm(instance=brand)
     return render(request, 'vehicle_rental/param/brand_form.html', {'form': form, 'segment': 'param_brands', 'title': 'Editar Marca'})
@@ -4313,6 +4367,8 @@ def location_create(request):
             location.save()
             messages.success(request, 'Local criado com sucesso.')
             return redirect('vehicle_rental:location_list')
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = DeliveryLocationForm()
     return render(request, 'vehicle_rental/param/location_form.html', {'form': form, 'segment': 'param_locations', 'title': 'Novo Local'})
@@ -4326,6 +4382,8 @@ def location_edit(request, pk):
             form.save()
             messages.success(request, 'Local atualizado com sucesso.')
             return redirect('vehicle_rental:location_list')
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = DeliveryLocationForm(instance=location)
     return render(request, 'vehicle_rental/param/location_form.html', {'form': form, 'segment': 'param_locations', 'title': 'Editar Local'})
@@ -4354,6 +4412,8 @@ def expense_category_create(request):
             form.save()
             messages.success(request, 'Categoria criada com sucesso.')
             return redirect('vehicle_rental:expense_category_list')
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = ExpenseCategoryForm()
     return render(request, 'vehicle_rental/param/expense_category_form.html', {'form': form, 'segment': 'param_expense_categories', 'title': 'Nova Categoria'})
@@ -4367,6 +4427,8 @@ def expense_category_edit(request, pk):
             form.save()
             messages.success(request, 'Categoria atualizada com sucesso.')
             return redirect('vehicle_rental:expense_category_list')
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = ExpenseCategoryForm(instance=category)
     return render(request, 'vehicle_rental/param/expense_category_form.html', {'form': form, 'segment': 'param_expense_categories', 'title': 'Editar Categoria'})
@@ -4394,6 +4456,8 @@ def system_config_edit(request):
             obj.save()
             messages.success(request, 'Configurações atualizadas com sucesso.')
             return redirect('vehicle_rental:system_config')
+        else:
+            add_form_errors_to_messages(request, form)
     else:
         form = SystemConfigurationForm(instance=config)
     return render(request, 'vehicle_rental/param/system_config.html', {'form': form, 'config': config, 'segment': 'param_system_config'})
@@ -4495,3 +4559,313 @@ def notification_resend(request, pk):
     }
     
     return render(request, 'vehicle_rental/notification_resend_confirm.html', context)
+
+
+@login_required
+def evaluation_list(request):
+    """List all rental evaluations with filtering and statistics"""
+    evaluations = RentalEvaluation.objects.select_related(
+        'rental__customer', 'rental__vehicle', 'rental__vehicle__brand'
+    ).all().order_by('-created_at')
+    
+    # Filtering
+    rating_filter = request.GET.get('rating', '')
+    search_query = request.GET.get('q', '')
+    vehicle_filter = request.GET.get('vehicle', '')
+    
+    if rating_filter:
+        evaluations = evaluations.filter(overall_rating=rating_filter)
+    
+    if vehicle_filter:
+        evaluations = evaluations.filter(rental__vehicle_id=vehicle_filter)
+    
+    if search_query:
+        evaluations = evaluations.filter(
+            Q(rental__customer__first_name__icontains=search_query) |
+            Q(rental__customer__last_name__icontains=search_query) |
+            Q(rental__vehicle__license_plate__icontains=search_query) |
+            Q(comments__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(evaluations, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    from django.db.models import Avg, Count
+    stats = {
+        'total': RentalEvaluation.objects.count(),
+        'avg_overall': RentalEvaluation.objects.aggregate(Avg('overall_rating'))['overall_rating__avg'] or 0,
+        'avg_vehicle': RentalEvaluation.objects.aggregate(Avg('vehicle_condition_rating'))['vehicle_condition_rating__avg'] or 0,
+        'avg_service': RentalEvaluation.objects.aggregate(Avg('service_quality_rating'))['service_quality_rating__avg'] or 0,
+        'avg_value': RentalEvaluation.objects.aggregate(Avg('value_for_money_rating'))['value_for_money_rating__avg'] or 0,
+        'would_recommend': RentalEvaluation.objects.filter(would_recommend=True).count(),
+        'by_rating': {i: RentalEvaluation.objects.filter(overall_rating=i).count() for i in range(1, 6)},
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'evaluations': page_obj.object_list,
+        'stats': stats,
+        'rating_filter': rating_filter,
+        'vehicle_filter': vehicle_filter,
+        'search_query': search_query,
+        'rating_choices': RentalEvaluation.RATING_CHOICES,
+        'segment': 'evaluations',
+    }
+    
+    return render(request, 'vehicle_rental/evaluation_list.html', context)
+
+
+# ===========================
+# User Management Views (Staff Only)
+# ===========================
+
+@login_required
+def user_list(request):
+    """List all users - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    # Only show staff users
+    users = User.objects.filter(is_staff=True).order_by('-date_joined')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    
+    # Pagination
+    paginator = Paginator(users, 20)
+    page_number = request.GET.get('page')
+    users_page = paginator.get_page(page_number)
+    
+    context = {
+        'users': users_page,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'segment': 'user_management',
+    }
+    
+    return render(request, 'vehicle_rental/user_list.html', context)
+
+
+@login_required
+def user_detail(request, pk):
+    """View details of a specific user - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    user = get_object_or_404(User, pk=pk)
+    
+    context = {
+        'user_obj': user,
+        'segment': 'user_management',
+    }
+    
+    return render(request, 'vehicle_rental/user_detail.html', context)
+
+
+@login_required
+def user_create(request):
+    """Create a new user - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    if request.method == 'POST':
+        form = UserCreateForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'Utilizador {user.username} criado com sucesso.')
+            return redirect('vehicle_rental:user_detail', pk=user.pk)
+        else:
+            add_form_errors_to_messages(request, form)
+    else:
+        form = UserCreateForm()
+    
+    context = {
+        'form': form,
+        'segment': 'user_management',
+    }
+    
+    return render(request, 'vehicle_rental/user_form.html', context)
+
+
+@login_required
+def user_edit(request, pk):
+    """Edit an existing user - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent editing superuser unless current user is also superuser
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Voc� n�o pode editar um superusu�rio.')
+        return redirect('vehicle_rental:user_detail', pk=user.pk)
+    
+    if request.method == 'POST':
+        form = UserEditForm(request.POST, instance=user)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'Utilizador {user.username} atualizado com sucesso.')
+            return redirect('vehicle_rental:user_detail', pk=user.pk)
+        else:
+            add_form_errors_to_messages(request, form)
+    else:
+        form = UserEditForm(instance=user)
+    
+    context = {
+        'form': form,
+        'user_obj': user,
+        'segment': 'user_management',
+    }
+    
+    return render(request, 'vehicle_rental/user_form.html', context)
+
+
+@login_required
+def user_delete(request, pk):
+    """Delete a user - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent deleting self
+    if user == request.user:
+        messages.error(request, 'Voc� n�o pode eliminar sua pr�pria conta.')
+        return redirect('vehicle_rental:user_list')
+    
+    # Prevent deleting superuser unless current user is also superuser
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Voc� n�o pode eliminar um superusu�rio.')
+        return redirect('vehicle_rental:user_detail', pk=user.pk)
+    
+    if request.method == 'POST':
+        username = user.username
+        user.delete()
+        messages.success(request, f'Utilizador {username} eliminado com sucesso.')
+        return redirect('vehicle_rental:user_list')
+    
+    context = {
+        'user_obj': user,
+        'segment': 'user_management',
+    }
+    
+    return render(request, 'vehicle_rental/user_delete_confirm.html', context)
+
+
+@login_required
+def user_toggle_active(request, pk):
+    """Activate/deactivate a user - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent toggling self
+    if user == request.user:
+        messages.error(request, 'Voc� n�o pode alterar o status da sua pr�pria conta.')
+        return redirect('vehicle_rental:user_detail', pk=user.pk)
+    
+    # Prevent toggling superuser unless current user is also superuser
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Voc� n�o pode alterar o status de um superusu�rio.')
+        return redirect('vehicle_rental:user_detail', pk=user.pk)
+    
+    user.is_active = not user.is_active
+    user.save()
+    
+    status = 'ativado' if user.is_active else 'desativado'
+    messages.success(request, f'Utilizador {user.username} {status} com sucesso.')
+    
+    return redirect('vehicle_rental:user_detail', pk=user.pk)
+
+
+@login_required
+def user_change_password(request, pk):
+    """Change a user'\''s password - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent changing superuser password unless current user is also superuser
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Voc� n�o pode alterar a password de um superusu�rio.')
+        return redirect('vehicle_rental:user_detail', pk=user.pk)
+    
+    if request.method == 'POST':
+        form = UserPasswordChangeForm(request.POST)
+        if form.is_valid():
+            user.set_password(form.cleaned_data['new_password1'])
+            user.save()
+            messages.success(request, f'Password do utilizador {user.username} alterada com sucesso.')
+            return redirect('vehicle_rental:user_detail', pk=user.pk)
+        else:
+            add_form_errors_to_messages(request, form)
+    else:
+        form = UserPasswordChangeForm()
+    
+    context = {
+        'form': form,
+        'user_obj': user,
+        'segment': 'user_management',
+    }
+    
+    return render(request, 'vehicle_rental/user_password_form.html', context)
+
+
+@login_required
+def user_permissions(request, pk):
+    """Manage user permissions - staff only"""
+    if not request.user.is_staff:
+        messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
+        return redirect('vehicle_rental:dashboard')
+    
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent changing superuser permissions unless current user is also superuser
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Voc� n�o pode alterar as permiss�es de um superusu�rio.')
+        return redirect('vehicle_rental:user_detail', pk=user.pk)
+    
+    if request.method == 'POST':
+        form = UserPermissionsForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Permissões do utilizador {user.username} atualizadas com sucesso.')
+            return redirect('vehicle_rental:user_detail', pk=user.pk)
+        else:
+            add_form_errors_to_messages(request, form)
+    else:
+        form = UserPermissionsForm(instance=user)
+    
+    context = {
+        'form': form,
+        'user_obj': user,
+        'segment': 'user_management',
+    }
+    
+    return render(request, 'vehicle_rental/user_permissions_form.html', context)

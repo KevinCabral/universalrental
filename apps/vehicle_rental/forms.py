@@ -1,8 +1,10 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.contrib.auth.models import User, Group, Permission
+from django.contrib.contenttypes.models import ContentType
 from .models import (
-    Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory, 
+    Vehicle, VehicleBrand, Customer, Rental, Expense, ExpenseCategory,
     MaintenanceRecord, RentalPhoto, DeliveryLocation, SystemConfiguration
 )
 
@@ -71,19 +73,19 @@ class VehicleForm(forms.ModelForm):
         year = self.cleaned_data['year']
         current_year = timezone.now().year
         if year < 1900 or year > current_year + 1:
-            raise ValidationError(f'Year must be between 1900 and {current_year + 1}')
+            raise ValidationError(f'O ano deve estar entre 1900 e {current_year + 1}')
         return year
     
     def clean_chassis_number(self):
         chassis_number = self.cleaned_data['chassis_number']
         if chassis_number and Vehicle.objects.filter(chassis_number=chassis_number).exclude(pk=self.instance.pk if self.instance else None).exists():
-            raise ValidationError('A vehicle with this chassis number already exists.')
+            raise ValidationError('Já existe um veículo com este número de chassis.')
         return chassis_number
     
     def clean_registration_number(self):
         registration_number = self.cleaned_data['registration_number']
         if Vehicle.objects.filter(registration_number=registration_number).exclude(pk=self.instance.pk if self.instance else None).exists():
-            raise ValidationError('A vehicle with this registration number already exists.')
+            raise ValidationError('Já existe um veículo com esta matrícula.')
         return registration_number
 
 
@@ -136,13 +138,13 @@ class CustomerForm(forms.ModelForm):
             if existing_customer:
                 # Only raise error if customer already has a user account
                 if existing_customer.user is not None:
-                    raise ValidationError('Customer with this email already exists.')
+                    raise ValidationError('Já existe um cliente com este email.')
         return email
     
     def clean_id_number(self):
         id_number = self.cleaned_data['id_number']
         if id_number and Customer.objects.filter(id_number=id_number).exclude(pk=self.instance.pk if self.instance else None).exists():
-            raise ValidationError('A customer with this ID number already exists.')
+            raise ValidationError('Já existe um cliente com este número de identificação.')
         return id_number
     
     def clean_driving_license_number(self):
@@ -152,7 +154,7 @@ class CustomerForm(forms.ModelForm):
             if existing_customer:
                 # Only raise error if customer already has a user account
                 if existing_customer.user is not None:
-                    raise ValidationError('Customer with this driving license number already exists.')
+                    raise ValidationError('Já existe um cliente com este número de carta de condução.')
         return license_number
     
     def clean_birth_date(self):
@@ -180,7 +182,7 @@ class CustomerForm(forms.ModelForm):
         issue_date = self.cleaned_data.get('license_issue_date')
         
         if expiry_date and expiry_date <= timezone.now().date():
-            raise ValidationError('License expiry date must be in the future.')
+            raise ValidationError('A data de validade da carta deve ser no futuro.')
         
         if issue_date and expiry_date and expiry_date <= issue_date:
             raise ValidationError('A data de validade deve ser posterior à data de emissão.')
@@ -356,13 +358,13 @@ class RentalForm(forms.ModelForm):
         
         # Validate commission fields - exactly one should be used
         if commission_percent is not None and commission_amount is not None:
-            raise ValidationError('Use either commission percentage OR fixed commission amount, not both.')
+            raise ValidationError('Use percentagem de comissão OU valor fixo, não ambos.')
         elif commission_percent is None and commission_amount is None:
-            raise ValidationError('You must specify either commission percentage OR fixed commission amount.')
+            raise ValidationError('Deve especificar a percentagem de comissão OU o valor fixo.')
         
         if start_date and end_date:
             if start_date >= end_date:
-                raise ValidationError('End date must be after start date.')
+                raise ValidationError('A data de fim deve ser posterior à data de início.')
             
             # Allow start dates in the past - removed restriction for flexibility
             # This allows creating rentals for historical data or backdated entries
@@ -380,10 +382,10 @@ class RentalForm(forms.ModelForm):
                     ).exclude(pk=self.instance.pk)
                     
                     if overlapping_rentals.exists():
-                        raise ValidationError('Vehicle is not available for the selected dates.')
+                        raise ValidationError('O veículo não está disponível para as datas selecionadas.')
                 else:
                     # New rental - vehicle not available for these dates
-                    raise ValidationError('Vehicle is not available for the selected dates.')
+                    raise ValidationError('O veículo não está disponível para as datas selecionadas.')
         
         return cleaned_data
     
@@ -392,7 +394,7 @@ class RentalForm(forms.ModelForm):
         vehicle = self.cleaned_data.get('vehicle')
         
         if vehicle and mileage_start < vehicle.mileage:
-            raise ValidationError(f'Starting mileage cannot be less than current vehicle mileage ({vehicle.mileage} km).')
+            raise ValidationError(f'A quilometragem inicial não pode ser inferior à quilometragem atual do veículo ({vehicle.mileage} km).')
         
         return mileage_start
     
@@ -572,7 +574,7 @@ class MaintenanceRecordForm(forms.ModelForm):
         date_completed = cleaned_data.get('date_completed')
         
         if date_completed and date_scheduled and date_completed < date_scheduled:
-            raise ValidationError('Completion date cannot be before scheduled date.')
+            raise ValidationError('A data de conclusão não pode ser anterior à data agendada.')
         
         return cleaned_data
     
@@ -581,7 +583,7 @@ class MaintenanceRecordForm(forms.ModelForm):
         vehicle = self.cleaned_data.get('vehicle')
         
         if vehicle and mileage < vehicle.mileage:
-            raise ValidationError(f'Maintenance mileage cannot be less than current vehicle mileage ({vehicle.mileage} km).')
+            raise ValidationError(f'A quilometragem de manutenção não pode ser inferior à quilometragem atual do veículo ({vehicle.mileage} km).')
         
         return mileage
 
@@ -790,3 +792,124 @@ class SystemConfigurationForm(forms.ModelForm):
             'euro_exchange_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'usd_exchange_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
         }
+
+# User Management Forms
+class UserCreateForm(forms.ModelForm):
+    """Form for creating a new user"""
+    password1 = forms.CharField(
+        label='Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter password'})
+    )
+    password2 = forms.CharField(
+        label='Confirm Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm password'})
+    )
+    
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email', 'is_active']
+        labels = {
+            'username': 'Nome de Utilizador',
+            'first_name': 'Primeiro Nome',
+            'last_name': 'Último Nome',
+            'email': 'Email',
+            'is_active': 'Ativo',
+        }
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome de utilizador'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Primeiro nome'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Último nome'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def clean_password2(self):
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError('As palavras-passe não coincidem.')
+        return password2
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email and User.objects.filter(email=email).exists():
+            raise ValidationError('Este email já está registado.')
+        return email
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data['password1'])
+        user.is_staff = True  # Always set as staff
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
+
+
+class UserEditForm(forms.ModelForm):
+    """Form for editing an existing user"""
+    
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email', 'is_active']
+        labels = {
+            'username': 'Nome de Utilizador',
+            'first_name': 'Primeiro Nome',
+            'last_name': 'Último Nome',
+            'email': 'Email',
+            'is_active': 'Ativo',
+        }
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome de utilizador', 'readonly': 'readonly'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Primeiro nome'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Último nome'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email and User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+            raise ValidationError('Este email já está registado.')
+        return email
+
+
+class UserPasswordChangeForm(forms.Form):
+    """Form for changing a user'\''s password"""
+    new_password1 = forms.CharField(
+        label='Nova Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter new password'})
+    )
+    new_password2 = forms.CharField(
+        label='Confirmar Nova Password',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm new password'})
+    )
+    
+    def clean_new_password2(self):
+        password1 = self.cleaned_data.get('new_password1')
+        password2 = self.cleaned_data.get('new_password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError('As palavras-passe não coincidem.')
+        return password2
+
+
+class UserPermissionsForm(forms.ModelForm):
+    """Form for managing user permissions"""
+    user_permissions = forms.ModelMultipleChoiceField(
+        queryset=Permission.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Permissões'
+    )
+    
+    class Meta:
+        model = User
+        fields = ['user_permissions']
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Organize permissions by content type for better display
+        vehicle_rental_ct = ContentType.objects.filter(app_label='vehicle_rental')
+        self.fields['user_permissions'].queryset = Permission.objects.filter(
+            content_type__in=vehicle_rental_ct
+        ).select_related('content_type').order_by('content_type__model', 'codename')

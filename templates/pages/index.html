@@ -157,13 +157,31 @@
             <div class="card-body">
               <div class="d-flex align-items-center">
                 <div class="flex-shrink-0">
-                  <div class="avtar avtar-s bg-light-primary rounded-circle">
+                  <div class="avtar avtar-s bg-light-danger rounded-circle">
                     <i class="ti ti-receipt f-24"></i>
                   </div>
                 </div>
                 <div class="flex-grow-1 ms-3">
                   <p class="text-muted mb-1 small">Despesas do Mês</p>
-                  <h4 class="mb-0">{{ monthly_expenses|floatformat:0 }} <small class="text-muted" style="font-size: 0.5em;">ECV</small></h4>
+                  <h4 class="mb-0 text-danger">{{ monthly_expenses|floatformat:0 }} <small class="text-muted" style="font-size: 0.5em;">ECV</small></h4>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="avtar avtar-s bg-light-warning rounded-circle">
+                    <i class="ti ti-tool f-24"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <p class="text-muted mb-1 small">Manutenção do Mês</p>
+                  <h4 class="mb-0 text-warning">{{ monthly_maintenance_costs|floatformat:0 }} <small class="text-muted" style="font-size: 0.5em;">ECV</small></h4>
                 </div>
               </div>
             </div>
@@ -176,13 +194,16 @@
               <div class="d-flex align-items-center">
                 <div class="flex-shrink-0">
                   <div class="avtar avtar-s {% if monthly_profit >= 0 %}bg-light-success{% else %}bg-light-danger{% endif %} rounded-circle">
-                    <i class="ti ti-trending-up f-24"></i>
+                    <i class="ti ti-trending-{% if monthly_profit >= 0 %}up{% else %}down{% endif %} f-24"></i>
                   </div>
                 </div>
                 <div class="flex-grow-1 ms-3">
-                  <p class="text-muted mb-1 small">Lucro do Mês</p>
+                  <p class="text-muted mb-1 small">Lucro Líquido do Mês</p>
                   <h4 class="mb-0 {% if monthly_profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ monthly_profit|floatformat:0 }} <small class="text-muted" style="font-size: 0.5em;">ECV</small></h4>
                 </div>
+              </div>
+              <div class="mt-2">
+                <small class="text-muted">Receita - Despesas - Manutenção</small>
               </div>
             </div>
           </div>

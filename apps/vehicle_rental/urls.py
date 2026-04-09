@@ -83,6 +83,9 @@ urlpatterns = [
     path('notifications/<int:pk>/', views.notification_detail, name='notification_detail'),
     path('notifications/<int:pk>/resend/', views.notification_resend, name='notification_resend'),
 
+    # Rental Evaluations
+    path('evaluations/', views.evaluation_list, name='evaluation_list'),
+
     # Reports
     path('reports/', views.reports_dashboard, name='reports_dashboard'),
     path('reports/revenue/', views.revenue_report, name='revenue_report'),
@@ -107,4 +110,14 @@ urlpatterns = [
     path('ajax/vehicle-availability/', views.check_vehicle_availability, name='check_vehicle_availability'),
     path('ajax/rental-pricing/', views.calculate_rental_pricing, name='calculate_rental_pricing'),
     path('api/create-brand/', views.api_create_brand, name='api_create_brand'),
+
+    # User Management (Staff Only)
+    path('users/', views.user_list, name='user_list'),
+    path('users/create/', views.user_create, name='user_create'),
+    path('users/<int:pk>/', views.user_detail, name='user_detail'),
+    path('users/<int:pk>/edit/', views.user_edit, name='user_edit'),
+    path('users/<int:pk>/delete/', views.user_delete, name='user_delete'),
+    path('users/<int:pk>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
+    path('users/<int:pk>/change-password/', views.user_change_password, name='user_change_password'),
+    path('users/<int:pk>/permissions/', views.user_permissions, name='user_permissions'),
 ]
