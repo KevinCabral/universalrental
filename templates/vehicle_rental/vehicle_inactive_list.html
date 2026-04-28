@@ -1,0 +1,166 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Veículos Desativados | DriveOn Car Rental{% endblock title %}
+
+{% block content %}
+
+<div class="pc-container">
+  <div class="pc-content">
+
+    <!-- Page Header -->
+    <div class="row m-b-4">
+      <div class="col-md-12">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Veículos Desativados</h5>
+        </div>
+        <ul class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'index' %}"><i class="fas fa-home"></i> Início</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:dashboard' %}">Aluguer de Veículos</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'vehicle_rental:vehicle_list' %}">Veículos</a></li>
+          <li class="breadcrumb-item active">Desativados</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-ban text-danger me-2"></i>
+              Veículos Desativados
+              <span class="text-muted fw-normal">({{ total_inactive }} total)</span>
+            </h5>
+            <div class="card-header-right">
+              <a href="{% url 'vehicle_rental:vehicle_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i> Voltar à Lista de Veículos
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <form method="get" class="row g-3 mb-3">
+              <div class="col-md-10">
+                <input type="text" name="search" class="form-control"
+                       placeholder="Pesquisar por registo, modelo ou marca..." value="{{ current_search }}">
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="fas fa-search me-1"></i> Pesquisar
+                </button>
+              </div>
+            </form>
+
+            {% if page_obj %}
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th><i class="fas fa-hashtag me-2"></i>Registo</th>
+                      <th><i class="fas fa-car me-2"></i>Veículo</th>
+                      <th><i class="fas fa-calendar me-2"></i>Ano</th>
+                      <th><i class="fas fa-info-circle me-2"></i>Último Estado</th>
+                      <th><i class="fas fa-cogs me-2"></i>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for vehicle in page_obj %}
+                    <tr>
+                      <td><strong class="text-primary">{{ vehicle.registration_number }}</strong></td>
+                      <td>
+                        <strong>{{ vehicle.brand.name }} {{ vehicle.model }}</strong>
+                        <br>
+                        <small class="text-muted">{{ vehicle.color }}</small>
+                      </td>
+                      <td><span class="badge bg-secondary">{{ vehicle.year }}</span></td>
+                      <td>
+                        <span class="badge bg-light text-dark border">{{ vehicle.get_status_display }}</span>
+                      </td>
+                      <td>
+                        <div class="btn-group" role="group">
+                          <a href="{% url 'vehicle_rental:vehicle_detail' vehicle.pk %}"
+                             class="btn btn-sm btn-outline-primary" title="Ver Detalhes" data-bs-toggle="tooltip">
+                            <i class="fas fa-eye"></i>
+                            <span class="d-none d-md-inline ms-1">Ver</span>
+                          </a>
+                          <form method="post" action="{% url 'vehicle_rental:vehicle_activate' vehicle.pk %}" class="d-inline ms-1"
+                                onsubmit="return confirm('Reativar o veículo {{ vehicle.registration_number|escapejs }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Reativar" data-bs-toggle="tooltip">
+                              <i class="fas fa-check-circle"></i>
+                              <span class="d-none d-md-inline ms-1">Ativar</span>
+                            </button>
+                          </form>
+                          {% if request.user.is_superuser or request.user.is_staff %}
+                          <form method="post" action="{% url 'vehicle_rental:vehicle_delete' vehicle.pk %}" class="d-inline ms-1"
+                                onsubmit="return confirm('ATENÇÃO: Eliminar permanentemente o veículo {{ vehicle.registration_number|escapejs }}? Esta ação não pode ser revertida.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar Permanentemente" data-bs-toggle="tooltip">
+                              <i class="fas fa-trash"></i>
+                              <span class="d-none d-md-inline ms-1">Eliminar</span>
+                            </button>
+                          </form>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              {% if page_obj.has_other_pages %}
+              <nav aria-label="Paginação" class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                  {% if page_obj.has_previous %}
+                    <li class="page-item">
+                      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                        <i class="fas fa-chevron-left"></i> Anterior
+                      </a>
+                    </li>
+                  {% endif %}
+                  {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                      <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                      <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                      </li>
+                    {% endif %}
+                  {% endfor %}
+                  {% if page_obj.has_next %}
+                    <li class="page-item">
+                      <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                        Próximo <i class="fas fa-chevron-right"></i>
+                      </a>
+                    </li>
+                  {% endif %}
+                </ul>
+              </nav>
+              {% endif %}
+
+            {% else %}
+              <div class="text-center py-5">
+                <i class="fas fa-ban text-muted" style="font-size: 4rem;"></i>
+                <h5 class="text-muted mt-3">Nenhum veículo desativado</h5>
+                <p class="text-muted">Todos os veículos estão atualmente ativos.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+});
+</script>
+{% endblock extra_js %}

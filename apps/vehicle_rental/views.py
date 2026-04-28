@@ -427,6 +427,101 @@ def vehicle_edit(request, pk):
 
 
 @login_required
+def vehicle_inactive_list(request):
+    """List of deactivated vehicles. Allows reactivation or deletion (admin)."""
+    vehicles = Vehicle.objects.select_related('brand').filter(is_active=False)
+
+    search_query = request.GET.get('search')
+    if search_query and search_query.strip() and search_query != 'None':
+        vehicles = vehicles.filter(
+            Q(registration_number__icontains=search_query) |
+            Q(model__icontains=search_query) |
+            Q(brand__name__icontains=search_query)
+        )
+
+    paginator = Paginator(vehicles.order_by('-updated_at', '-id'), 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'current_search': search_query if search_query and search_query != 'None' else '',
+        'total_inactive': Vehicle.objects.filter(is_active=False).count(),
+    }
+    return render(request, 'vehicle_rental/vehicle_inactive_list.html', context)
+
+
+@login_required
+def vehicle_deactivate(request, pk):
+    """Deactivate a vehicle if it is not currently rented or has no upcoming/active rentals."""
+    vehicle = get_object_or_404(Vehicle, pk=pk)
+
+    if request.method != 'POST':
+        return redirect('vehicle_rental:vehicle_detail', pk=vehicle.pk)
+
+    # Block deactivation if status is 'rented' or has confirmed/active rentals
+    blocking_rentals = vehicle.rentals.filter(status__in=['confirmed', 'active']).exists()
+    if vehicle.status == 'rented' or blocking_rentals:
+        messages.error(
+            request,
+            f'Não é possível desativar o veículo {vehicle.registration_number}: '
+            f'existe um aluguer ativo ou confirmado associado.'
+        )
+        return redirect('vehicle_rental:vehicle_detail', pk=vehicle.pk)
+
+    Vehicle.objects.filter(pk=vehicle.pk).update(is_active=False)
+    messages.success(request, f'Veículo {vehicle.registration_number} desativado com sucesso.')
+
+    next_url = request.POST.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('vehicle_rental:vehicle_list')
+
+
+@login_required
+def vehicle_activate(request, pk):
+    """Reactivate a deactivated vehicle."""
+    vehicle = get_object_or_404(Vehicle, pk=pk)
+
+    if request.method != 'POST':
+        return redirect('vehicle_rental:vehicle_inactive_list')
+
+    Vehicle.objects.filter(pk=vehicle.pk).update(is_active=True)
+    messages.success(request, f'Veículo {vehicle.registration_number} reativado com sucesso.')
+    return redirect('vehicle_rental:vehicle_inactive_list')
+
+
+@login_required
+def vehicle_delete(request, pk):
+    """Permanently delete a deactivated vehicle (admin only)."""
+    vehicle = get_object_or_404(Vehicle, pk=pk)
+
+    if not (request.user.is_superuser or request.user.is_staff):
+        messages.error(request, 'Apenas administradores podem eliminar veículos.')
+        return redirect('vehicle_rental:vehicle_inactive_list')
+
+    if request.method != 'POST':
+        return redirect('vehicle_rental:vehicle_inactive_list')
+
+    if vehicle.is_active:
+        messages.error(request, 'Apenas veículos desativados podem ser eliminados.')
+        return redirect('vehicle_rental:vehicle_inactive_list')
+
+    if vehicle.rentals.exists():
+        messages.error(
+            request,
+            f'Não é possível eliminar o veículo {vehicle.registration_number}: '
+            f'existem registos de aluguer associados. Mantenha-o desativado.'
+        )
+        return redirect('vehicle_rental:vehicle_inactive_list')
+
+    reg = vehicle.registration_number
+    vehicle.delete()
+    messages.success(request, f'Veículo {reg} eliminado permanentemente.')
+    return redirect('vehicle_rental:vehicle_inactive_list')
+
+
+@login_required
 def customer_list(request):
     """List all customers with search and pagination"""
     
