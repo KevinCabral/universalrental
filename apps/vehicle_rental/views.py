@@ -4755,8 +4755,8 @@ def evaluation_list(request):
 
 @login_required
 def user_list(request):
-    """List all users - staff only"""
-    if not request.user.is_staff:
+    """List all users - superuser only"""
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     
@@ -4797,8 +4797,8 @@ def user_list(request):
 
 @login_required
 def user_detail(request, pk):
-    """View details of a specific user - staff only"""
-    if not request.user.is_staff:
+    """View details of a specific user - superuser only"""
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     
@@ -4814,8 +4814,8 @@ def user_detail(request, pk):
 
 @login_required
 def user_create(request):
-    """Create a new user - staff only"""
-    if not request.user.is_staff:
+    """Create a new user - superuser only"""
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     
@@ -4840,8 +4840,8 @@ def user_create(request):
 
 @login_required
 def user_edit(request, pk):
-    """Edit an existing user - staff only"""
-    if not request.user.is_staff:
+    """Edit an existing user - superuser only"""
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     
@@ -4874,8 +4874,8 @@ def user_edit(request, pk):
 
 @login_required
 def user_delete(request, pk):
-    """Delete a user - staff only"""
-    if not request.user.is_staff:
+    """Delete a user - superuser only"""
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     
@@ -4907,8 +4907,8 @@ def user_delete(request, pk):
 
 @login_required
 def user_toggle_active(request, pk):
-    """Activate/deactivate a user - staff only"""
-    if not request.user.is_staff:
+    """Activate/deactivate a user - superuser only"""
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     
@@ -4936,7 +4936,7 @@ def user_toggle_active(request, pk):
 @login_required
 def user_change_password(request, pk):
     """Change a user'\''s password - staff only"""
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     
@@ -4970,8 +4970,8 @@ def user_change_password(request, pk):
 
 @login_required
 def user_permissions(request, pk):
-    """Manage user permissions - staff only"""
-    if not request.user.is_staff:
+    """Manage user permissions - superuser only"""
+    if not request.user.is_superuser:
         messages.error(request, 'Voc� n�o tem permiss�o para acessar esta p�gina.')
         return redirect('vehicle_rental:dashboard')
     

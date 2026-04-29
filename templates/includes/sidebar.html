@@ -180,8 +180,8 @@
           </ul>
         </li>
         
-        <!-- Gestão de Usuários (apenas para staff) -->
-        {% if request.user.is_staff %}
+        <!-- Gestão de Usuários (apenas para superusuários) -->
+        {% if request.user.is_superuser %}
         <li class="pc-item pc-hasmenu">
           <a href="#!" class="pc-link" style="border-radius: 8px; margin-bottom: 2px; transition: all 0.3s ease;">
             <span class="pc-micon">
