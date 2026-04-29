@@ -72,19 +72,65 @@
                                 {% if rental.pickup_location %}
                                 <tr>
                                     <td style="padding:6px 0; color:#777;">Local de Entrega:</td>
-                                    <td style="padding:6px 0;">{{ rental.pickup_location }}</td>
+                                    <td style="padding:6px 0;">{{ rental.pickup_location.name }}</td>
                                 </tr>
                                 {% endif %}
                                 {% if rental.return_location %}
                                 <tr>
                                     <td style="padding:6px 0; color:#777;">Local de Devolução:</td>
-                                    <td style="padding:6px 0;">{{ rental.return_location }}</td>
+                                    <td style="padding:6px 0;">{{ rental.return_location.name }}</td>
                                 </tr>
                                 {% endif %}
                                 <tr>
                                     <td style="padding:12px 0; font-size:16px; font-weight:bold; color:#ff9800; border-top:2px solid #eee;">TOTAL ESTIMADO:</td>
                                     <td style="padding:12px 0; text-align:right; font-size:16px; font-weight:bold; color:#ff9800; border-top:2px solid #eee;">
                                         {{ rental.total_amount|floatformat:2 }} {{ rental.currency }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Bank Account Details -->
+                    <tr>
+                        <td style="padding:20px 40px;">
+                            <h2 style="margin:0 0 15px; font-size:16px; color:#28a745; border-bottom:2px solid #28a745; padding-bottom:8px;">
+                                💳 Dados Bancários para Transferência
+                            </h2>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa; border-radius:6px; padding:15px; font-size:14px;">
+                                <tr>
+                                    <td style="padding:6px 0; color:#555; width:35%; font-weight:500;">Titular da Conta:</td>
+                                    <td style="padding:6px 0; color:#333; font-weight:bold;">UNIVERSAL LDA</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#555; font-weight:500;">Banco:</td>
+                                    <td style="padding:6px 0; color:#333;">BAI - Banco Angolano de Investimentos</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#555; font-weight:500;">Tipo de Conta:</td>
+                                    <td style="padding:6px 0; color:#333;">Conta BAI</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#555; font-weight:500;">Número da Conta:</td>
+                                    <td style="padding:6px 0; color:#333; font-family:monospace; font-size:15px; font-weight:bold;">100400069902001</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#555; font-weight:500;">NIB:</td>
+                                    <td style="padding:6px 0; color:#333; font-family:monospace; font-size:13px;">000810040006990200106</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#555; font-weight:500;">IBAN:</td>
+                                    <td style="padding:6px 0; color:#333; font-family:monospace; font-size:13px;">CV64000810040006990200106</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:6px 0; color:#555; font-weight:500;">SWIFT/BIC:</td>
+                                    <td style="padding:6px 0; color:#333; font-family:monospace; font-size:15px; font-weight:bold;">BAIPCVCV</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="padding:12px 0 0;">
+                                        <p style="margin:0; padding:10px; background-color:#fff3cd; border-left:4px solid #ffc107; color:#856404; font-size:13px; line-height:1.5;">
+                                            <strong>⚠️ Importante:</strong> Por favor, envie o comprovativo de transferência para <strong>{{ company_email }}</strong> indicando o número da reserva <strong>#{{ rental.id }}</strong> como referência.
+                                        </p>
                                     </td>
                                 </tr>
                             </table>
