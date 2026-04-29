@@ -375,6 +375,33 @@ def vehicle_edit(request, pk):
         if form.is_valid():
             vehicle = form.save()
             
+            # Handle photo deletions
+            photos_to_delete = request.POST.get('photos_to_delete', '')
+            if photos_to_delete:
+                photo_ids = [int(pid) for pid in photos_to_delete.split(',') if pid.strip()]
+                deleted_count = 0
+                for photo_id in photo_ids:
+                    try:
+                        photo = VehiclePhoto.objects.get(id=photo_id, vehicle=vehicle)
+                        photo.delete()  # This will also delete the file from storage
+                        deleted_count += 1
+                    except VehiclePhoto.DoesNotExist:
+                        logger.warning(f'Photo ID {photo_id} not found for vehicle {vehicle.pk}')
+                
+                if deleted_count > 0:
+                    messages.info(request, f'{deleted_count} foto(s) eliminada(s) com sucesso.')
+            
+            # Handle main photo deletion
+            delete_main_photo = request.POST.get('delete_main_photo', '')
+            if delete_main_photo == '1' and vehicle.photo:
+                # Delete the main photo file from storage
+                if vehicle.photo and os.path.isfile(vehicle.photo.path):
+                    os.remove(vehicle.photo.path)
+                # Clear the photo field
+                vehicle.photo = None
+                vehicle.save()
+                messages.info(request, 'Foto principal eliminada com sucesso.')
+            
             # Handle multiple additional photos
             additional_photos = request.FILES.getlist('additional_photos')
             photos_created = 0
@@ -920,7 +947,16 @@ def _send_rental_booking_email(rental, request):
         f'A sua reserva #{rental.id} foi criada com sucesso.\n'
         f'Veículo: {rental.vehicle.brand.name} {rental.vehicle.model} ({rental.vehicle.year})\n'
         f'Período: {rental.start_date:%d/%m/%Y} - {rental.end_date:%d/%m/%Y}\n'
+        f'Total Estimado: {rental.total_amount} {rental.currency}\n'
         f'Status: Pendente de Confirmação\n\n'
+        f'DADOS BANCÁRIOS PARA TRANSFERÊNCIA:\n'
+        f'Titular: UNIVERSAL LDA\n'
+        f'Banco: BAI - Banco Angolano de Investimentos\n'
+        f'Número da Conta: 100400069902001\n'
+        f'NIB: 000810040006990200106\n'
+        f'IBAN: CV64000810040006990200106\n'
+        f'SWIFT/BIC: BAIPCVCV\n\n'
+        f'Por favor, envie o comprovativo de transferência para universal.r.car@gmail.com indicando o número da reserva #{rental.id} como referência.\n\n'
         f'Acompanhe sua reserva em: {tracking_url}\n\n'
         f'Obrigado!'
     )
@@ -1139,7 +1175,7 @@ def _send_welcome_email(customer, request=None):
         f'Detalhes da Conta:\n'
         f'Nome: {customer.full_name}\n'
         f'Email: {customer.email}\n'
-        f'Telefone: {customer.phone}\n\n'
+        f'Telefone: {customer.phone_number}\n\n'
         f'Acesse nosso portal: {portal_url}\n\n'
         f'Obrigado por escolher a Universal Rent a Car!'
     )

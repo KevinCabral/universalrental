@@ -60,13 +60,13 @@
                                 {% if rental.pickup_location %}
                                 <tr>
                                     <td style="padding:6px 0; color:#777;">Local de Entrega:</td>
-                                    <td style="padding:6px 0;">{{ rental.pickup_location }}</td>
+                                    <td style="padding:6px 0;">{{ rental.pickup_location.name }}</td>
                                 </tr>
                                 {% endif %}
                                 {% if rental.return_location %}
                                 <tr>
                                     <td style="padding:6px 0; color:#777;">Local de Devolução:</td>
-                                    <td style="padding:6px 0;">{{ rental.return_location }}</td>
+                                    <td style="padding:6px 0;">{{ rental.return_location.name }}</td>
                                 </tr>
                                 {% endif %}
                             </table>

@@ -417,9 +417,15 @@
                 <div class="col-md-6">
                   <div class="mb-3">
                     <label class="form-label">Pré-visualização Atual</label>
-                    <div class="border rounded p-2">
+                    <div class="border rounded p-2 position-relative" id="main-photo-preview">
                       <img src="{{ vehicle.photo.url }}" alt="Foto do veículo {{ vehicle.registration_number }}" 
                            class="img-fluid rounded" style="max-height: 200px; object-fit: cover;">
+                      <button type="button" 
+                              class="btn btn-sm btn-danger position-absolute delete-main-photo-btn"
+                              style="bottom: 10px; right: 10px; opacity: 0.9;"
+                              title="Eliminar foto principal">
+                        <i data-feather="trash-2" style="width: 16px; height: 16px;"></i>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -443,7 +449,7 @@
                   <h6 class="text-muted mb-3">Fotos Existentes ({{ vehicle.additional_photos.count }})</h6>
                   <div class="row">
                     {% for photo in vehicle.additional_photos.all %}
-                    <div class="col-md-4 col-sm-6 mb-3">
+                    <div class="col-md-4 col-sm-6 mb-3" id="existing-photo-{{ photo.id }}">
                       <div class="card h-100">
                         <div class="position-relative">
                           <img src="{{ photo.image.url }}" alt="{{ photo.title }}" 
@@ -453,6 +459,14 @@
                             <i data-feather="star"></i> Principal
                           </span>
                           {% endif %}
+                          <!-- Delete button -->
+                          <button type="button" 
+                                  class="btn btn-danger btn-sm position-absolute bottom-0 end-0 m-2 delete-photo-btn"
+                                  data-photo-id="{{ photo.id }}"
+                                  data-photo-title="{{ photo.title|default:'Sem título' }}"
+                                  title="Eliminar foto">
+                            <i data-feather="trash-2" style="width: 16px; height: 16px;"></i>
+                          </button>
                         </div>
                         <div class="card-body p-2">
                           <h6 class="card-title text-truncate mb-1">{{ photo.title|default:"Sem título" }}</h6>
@@ -470,7 +484,13 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- Hidden input to store photos to delete -->
+              <input type="hidden" name="photos_to_delete" id="photos_to_delete" value="">
               {% endif %}
+              
+              <!-- Hidden input to mark main photo for deletion -->
+              <input type="hidden" name="delete_main_photo" id="delete_main_photo" value="">
 
               <!-- Multiple photo upload section -->
               <div class="row">
@@ -550,6 +570,51 @@ $(document).ready(function() {
     $('.form-label.required').each(function() {
         if (!$(this).find('.text-danger').length) {
             $(this).append(' <span class="text-danger">*</span>');
+        }
+    });
+    
+    // Delete photo functionality - must be initialized before form validation
+    var photosToDelete = [];
+    
+    $('.delete-photo-btn').on('click', function() {
+        var photoId = $(this).data('photo-id');
+        var photoTitle = $(this).data('photo-title');
+        
+        if (confirm('Tem certeza de que deseja eliminar a foto "' + photoTitle + '"?\\nEsta ação não pode ser desfeita.')) {
+            // Add to deletion list
+            photosToDelete.push(photoId);
+            $('#photos_to_delete').val(photosToDelete.join(','));
+            
+            // Remove the photo card from view with animation
+            $('#existing-photo-' + photoId).fadeOut(300, function() {
+                $(this).remove();
+                
+                // Check if there are no more photos
+                if ($('.delete-photo-btn').length === 0) {
+                    $('.row.mb-4').has('.col-12 h6.text-muted').fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                }
+            });
+            
+            showMessage('info', 'Foto marcada para exclusão. Clique em "Atualizar Veículo" para confirmar.');
+        }
+    });
+    
+    // Delete main photo functionality
+    $('.delete-main-photo-btn').on('click', function() {
+        if (confirm('Tem certeza de que deseja eliminar a foto principal?\\nEsta ação não pode ser desfeita.')) {
+            // Mark main photo for deletion
+            $('#delete_main_photo').val('1');
+            
+            // Remove the photo preview with animation
+            $('#main-photo-preview').fadeOut(300, function() {
+                $(this).parent().fadeOut(300, function() {
+                    $(this).remove();
+                });
+            });
+            
+            showMessage('info', 'Foto principal marcada para exclusão. Clique em "Atualizar Veículo" para confirmar.');
         }
     });
     
